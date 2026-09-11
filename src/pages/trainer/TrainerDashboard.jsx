@@ -5,6 +5,7 @@ export default function TrainerDashboard() {
   const {
     courses, profiles, competencies, exams, currentUser,
     spawnAiExam, trainerLibrary, onUploadResource, onUpdateTrainerProfile,
+    evaluations, getTraineeGaps, getCompletedCoursesFor,
   } = useApp();
 
   const [aiCourseId, setAiCourseId] = useState('');
@@ -32,6 +33,44 @@ export default function TrainerDashboard() {
   const trainers = profiles.filter(p => p.role === 'Trainer');
   const totalEnrolled = allCourses.length;
   const examCount = exams.length;
+
+  const approvedTrainees = profiles.filter(p => p.role === 'Trainee' && p.approved_by_admin);
+  const examsByCourse = exams.reduce((acc, ex) => {
+    (acc[ex.course_id] = acc[ex.course_id] || []).push(ex);
+    return acc;
+  }, {});
+  const courseParticipation = allCourses.map(course => {
+    const courseExams = examsByCourse[course.id] || [];
+    const examIds = courseExams.map(ex => ex.id);
+    const relEvals = evaluations.filter(e => examIds.includes(e.exam_id));
+    const submittedTrainees = new Set(relEvals.map(e => e.trainee_id));
+    const avgScore = relEvals.length ? Math.round(relEvals.reduce((a, e) => a + e.percentage, 0) / relEvals.length) : 0;
+    return {
+      course,
+      examCount: courseExams.length,
+      approved: approvedTrainees.length,
+      submitted: submittedTrainees.size,
+      notStarted: Math.max(0, approvedTrainees.length - submittedTrainees.size),
+      avgScore,
+    };
+  });
+  const traineeMonitor = approvedTrainees.map(t => {
+    const ev = evaluations.filter(e => e.trainee_id === t.id);
+    const attempted = ev.length;
+    const avg = attempted ? Math.round(ev.reduce((a, e) => a + e.percentage, 0) / attempted) : 0;
+    const completed = getCompletedCoursesFor(t.id).length;
+    const gaps = getTraineeGaps(t.id);
+    const highGaps = gaps.filter(g => g.priority === 'HIGH PRIORITY').length;
+    const lowCap = gaps.length ? Math.round(gaps.reduce((a, g) => a + g.current_score, 0) / gaps.length) : null;
+    return { t, attempted, avg, completed, highGaps, lowCap };
+  });
+
+  function traineeStatus(row) {
+    if (row.attempted === 0) return { label: 'Not started', cls: 'badge-neutral' };
+    if (row.avg >= 85) return { label: 'Strong performance', cls: 'badge-success' };
+    if (row.avg >= 60 && row.highGaps === 0) return { label: 'On track', cls: 'badge-info' };
+    return { label: 'Needs support', cls: 'badge-danger' };
+  }
 
   useEffect(() => () => { clearTimeout(aiTimer.current); clearTimeout(resTimer.current); }, []);
 
@@ -301,6 +340,105 @@ export default function TrainerDashboard() {
           <div className="stat-label">Training Scientists</div>
           <div className="stat-value">{trainers.length}</div>
           <div className="stat-change up">Across specialisations</div>
+        </div>
+      </div>
+
+      {/* ── SECTION C: TRAINEE PARTICIPATION & PERFORMANCE MONITOR ─────────── */}
+      <div className="card" style={{ marginBottom: '24px', borderLeft: '6px solid var(--success)' }}>
+        <div className="card-header">
+          <h3 style={{ fontSize: '15px', fontWeight: 700 }}>Section C — Trainee Participation &amp; Performance Monitor</h3>
+        </div>
+        <div className="card-body" style={{ padding: '0 24px 20px' }}>
+          <div style={{ fontSize: '13px', fontWeight: 700, margin: '16px 0 10px' }}>Participation by Model Course</div>
+          <div className="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Model Course</th>
+                  <th>Assessment</th>
+                  <th>Approved Trainees</th>
+                  <th>Submitted</th>
+                  <th>Not Started</th>
+                  <th>Avg Score</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {courseParticipation.map(({ course, examCount: eCount, approved, submitted, notStarted, avgScore }) => (
+                  <tr key={course.id}>
+                    <td style={{ fontWeight: 600 }}>{course.title}</td>
+                    <td>{eCount === 0 ? <span className="badge badge-neutral">No assessment</span> : <span className="badge badge-info">{eCount} live</span>}</td>
+                    <td>{approved}</td>
+                    <td>{submitted}</td>
+                    <td>{notStarted}</td>
+                    <td>{avgScore > 0 ? `${avgScore}%` : '—'}</td>
+                    <td>
+                      {eCount === 0
+                        ? <span className="badge badge-neutral">Not yet assessed</span>
+                        : submitted === 0
+                          ? <span className="badge badge-danger">Awaiting participation</span>
+                          : submitted >= approved
+                            ? <span className="badge badge-success">Fully attempted</span>
+                            : <span className="badge badge-info">{Math.round((submitted / approved) * 100)}% attempted</span>}
+                    </td>
+                  </tr>
+                ))}
+                {courseParticipation.length === 0 && (
+                  <tr><td colSpan="7"><div className="empty-state"><p>No model courses in the corpus.</p></div></td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <div style={{ fontSize: '13px', fontWeight: 700, margin: '20px 0 10px' }}>Per-Trainee Performance</div>
+          <div className="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Trainee</th>
+                  <th>Station Anchor</th>
+                  <th>Attempted</th>
+                  <th>Avg Score</th>
+                  <th>Completed</th>
+                  <th>Critical Gaps</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {traineeMonitor.map((row) => {
+                  const st = traineeStatus(row);
+                  return (
+                    <tr key={row.t.id}>
+                      <td>
+                        <div style={{ fontWeight: 600 }}>{row.t.name}</div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{row.t.designation} · {row.t.employee_id}</div>
+                      </td>
+                      <td>{row.t.station_location}</td>
+                      <td>{row.attempted}</td>
+                      <td style={{ minWidth: '140px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div className="progress-bar-container" style={{ flex: 1, width: 'auto' }}>
+                            <div className="progress-bar" style={{ width: `${row.avg}%`, background: row.avg >= 85 ? 'var(--success)' : row.avg >= 60 ? 'var(--secondary)' : 'var(--danger)' }} />
+                          </div>
+                          <span style={{ fontSize: '12px', fontWeight: 700 }}>{row.avg}%</span>
+                        </div>
+                      </td>
+                      <td>{row.completed}</td>
+                      <td>{row.highGaps > 0 ? <span className="badge badge-danger">{row.highGaps}</span> : <span style={{ color: 'var(--success)', fontSize: '12px' }}>None</span>}</td>
+                      <td><span className={`badge ${st.cls}`}>{st.label}</span></td>
+                    </tr>
+                  );
+                })}
+                {traineeMonitor.length === 0 && (
+                  <tr><td colSpan="7"><div className="empty-state"><p>No approved trainees to monitor yet.</p></div></td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '10px' }}>
+            Participation counts unique trainees who submitted an assessment for that course. Avg score spans all submitted evaluations;
+            critical gaps = competency deficits of 25+ index points (HIGH PRIORITY).
+          </div>
         </div>
       </div>
 
