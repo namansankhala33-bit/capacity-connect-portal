@@ -22,6 +22,7 @@ export default function TrainerDashboard() {
   const [resTitle, setResTitle] = useState('');
   const [resType, setResType] = useState('');
   const [resDesc, setResDesc] = useState('');
+  const [resFile, setResFile] = useState(null);
   const [resFlash, setResFlash] = useState(false);
   const resTimer = useRef(null);
 
@@ -77,9 +78,34 @@ export default function TrainerDashboard() {
     setProfileEdit(true);
   }
 
-  function handleResourcePublish(e) {
+  function readFileAsDataUrl(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(new Error('Could not read the selected file.'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function formatSize(bytes) {
+    if (!bytes && bytes !== 0) return '';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+
+  async function handleResourcePublish(e) {
     e.preventDefault();
     if (!resTitle.trim() || !resType || !resDesc.trim()) return;
+    let fileData = null;
+    if (resFile) {
+      try {
+        fileData = await readFileAsDataUrl(resFile);
+      } catch {
+        window.alert('Could not read the selected file.');
+        return;
+      }
+    }
     const newResource = {
       id: `lib-${Date.now()}`,
       title: resTitle.trim(),
@@ -87,11 +113,16 @@ export default function TrainerDashboard() {
       description: resDesc.trim(),
       author: currentUser?.name || 'Faculty Member',
       date: new Date().toISOString().slice(0, 10),
+      fileName: resFile ? resFile.name : null,
+      fileSize: resFile ? resFile.size : null,
+      fileType: resFile ? resFile.type : null,
+      fileData: fileData || null,
     };
     onUploadResource(newResource);
     setResTitle('');
     setResType('');
     setResDesc('');
+    setResFile(null);
     setResFlash(true);
     clearTimeout(resTimer.current);
     resTimer.current = setTimeout(() => setResFlash(false), 1500);
@@ -191,6 +222,32 @@ export default function TrainerDashboard() {
                   placeholder="Describe the syllabus coverage, target competencies and use-case context…"
                   required
                 />
+              </div>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label style={{ fontSize: '12px', fontWeight: 600 }}>Attach Video / Document (optional)</label>
+                <input
+                  type="file"
+                  accept="video/*,audio/*,.pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx,.txt,.zip"
+                  onChange={e => setResFile(e.target.files?.[0] || null)}
+                />
+                {resFile && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '8px', fontSize: '12px' }}>
+                    <span style={{ fontWeight: 600, color: 'var(--primary)' }}>📎 {resFile.name}</span>
+                    <span style={{ color: 'var(--text-secondary)' }}>· {formatSize(resFile.size)}</span>
+                    <button
+                      type="button"
+                      className="link-btn"
+                      style={{ color: 'var(--danger)' }}
+                      onClick={() => setResFile(null)}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                )}
+                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '6px' }}>
+                  The chosen file is embedded into the resource and trainees download the exact file. Files above ~4&nbsp;MB may not persist
+                  across devices in this prototype.
+                </div>
               </div>
               <button
                 type="submit"

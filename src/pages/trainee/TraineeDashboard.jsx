@@ -41,7 +41,23 @@ export default function TraineeDashboard() {
     return { domain: d.short, full: d.label, score, target, gap: Math.max(0, target - score) };
   });
 
+  function formatSize(bytes) {
+    if (!bytes && bytes !== 0) return '';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+
   function downloadResource(resource) {
+    if (resource.fileData) {
+      const a = document.createElement('a');
+      a.href = resource.fileData;
+      a.download = resource.fileName || 'study-material';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      return;
+    }
     const text = `${resource.title}\n\nType: ${resource.type}\nAuthor: ${resource.author}\nDate: ${resource.date}\n\n${resource.description}\n\nIMD Capacity Connect — Trainer Technical Library (CI/CD onboarding material).`;
     const blob = new Blob([text], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
@@ -208,6 +224,11 @@ export default function TraineeDashboard() {
                   </div>
                   <div className="library-title">{resource.title}</div>
                   <div className="library-desc">{resource.description}</div>
+                  {resource.fileName && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', marginTop: '6px', fontWeight: 600, color: 'var(--primary)' }}>
+                      📎 {resource.fileName} <span style={{ color: 'var(--text-secondary)', fontWeight: 400 }}>· {formatSize(resource.fileSize)}</span>
+                    </div>
+                  )}
                   <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
                     Published {resource.date} · IMD Faculty Archive
                   </div>
