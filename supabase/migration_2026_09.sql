@@ -432,6 +432,51 @@ begin
 end;
 $$;
 
+-- ===================== 2e. ADMIN ROLE MANAGEMENT ==============
+create or replace function public.update_user_role(
+  p_admin_email text,
+  p_admin_password text,
+  p_profile_id uuid,
+  p_new_role text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+volatile
+as $$
+declare
+  v_admin public.user_profiles;
+  v_row public.user_profiles;
+begin
+  if p_new_role not in ('Trainee', 'Trainer', 'Admin') then
+    raise exception 'Invalid role assignment, must be Trainee, Trainer or Admin' using errcode = '22023';
+  end if;
+
+  select * into v_admin
+  from public.user_profiles
+  where role = 'Admin'
+    and email = lower(trim(p_admin_email))
+    and profile_password = p_admin_password
+  limit 1;
+
+  if not found then
+    raise exception 'Unauthorized: valid Admin credentials required' using errcode = '42501';
+  end if;
+
+  update public.user_profiles
+  set role = p_new_role
+  where id = p_profile_id
+  returning * into v_row;
+
+  if not found then
+    raise exception 'Profile not found' using errcode = 'P0002';
+  end if;
+
+  return to_jsonb(v_row);
+end;
+$$;
+
 -- ===================== 3. TRAINER COURSE + MODULE BUNDLE ==========
 create or replace function public.save_course_with_modules(
   p_trainer_email text,

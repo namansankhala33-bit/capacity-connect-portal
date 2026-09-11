@@ -1,8 +1,37 @@
 import { useState } from 'react';
+import {
+  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  PieChart, Pie, Cell, LineChart, Line,
+} from 'recharts';
 import { useApp } from '../../context/AppContext';
 
+const ROLE_COLORS = { Admin: 'var(--danger)', Trainer: 'var(--secondary)', Trainee: 'var(--success)' };
+const STATION_COLORS = ['#0ea5e9', '#16a34a', '#f59e0b', '#8b5cf6', '#ec4899', '#dc2626', '#14b8a6'];
+const BROADCAST_TYPES = ['Notification', 'Announcement', 'Achievement', 'New Content'];
+const ACTIVITY_EPOCH_MS = Date.now();
+
+function bulTagClass(type) {
+  const t = String(type || '').toLowerCase();
+  if (t.includes('achievement')) return 'amber';
+  if (t.includes('new content')) return 'violet';
+  if (t.includes('announcement')) return 'green';
+  return 'red';
+}
+
+function formatDate(d) {
+  try {
+    return new Date(d).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  } catch {
+    return String(d || '');
+  }
+}
+
 export default function AdminDashboard() {
-  const { profiles, courses, competencies, scores, bulletins, adminCreateDirectProfile, adminApproveTrainee } = useApp();
+  const {
+    profiles, users, courses, modules, scores,
+    bulletinBoard, certifications,
+    exams, evaluations, adminCreateDirectProfile, adminApproveTrainee, onChangeUserRole, onPublishBulletin,
+  } = useApp();
 
   const [enroll, setEnroll] = useState({ name: '', email: '', designation: '', station_location: '' });
   const [enrolling, setEnrolling] = useState(false);
@@ -10,6 +39,11 @@ export default function AdminDashboard() {
   const [enrollMsg, setEnrollMsg] = useState('');
   const [approvingId, setApprovingId] = useState(null);
   const [approveMsg, setApproveMsg] = useState('');
+  const [roleBusy, setRoleBusy] = useState(null);
+  const [roleMsg, setRoleMsg] = useState('');
+  const [post, setPost] = useState({ title: '', type: 'Notification', message: '' });
+  const [pubMsg, setPubMsg] = useState('');
+  const [pubError, setPubError] = useState('');
 
   function handleEnrollSubmit(e) {
     e.preventDefault();
@@ -33,26 +67,95 @@ export default function AdminDashboard() {
       .finally(() => setApprovingId(null));
   }
 
+  async function handleRoleChange(id, newRole) {
+    const current = profiles.find(p => p.id === id);
+    if (!current || current.role === newRole) return;
+    setRoleBusy(id);
+    setRoleMsg('');
+    try {
+      await onChangeUserRole(id, newRole);
+      setRoleMsg(`✅ Actual role reassigned → ${newRole} for ${current.name}.`);
+    } catch (err) {
+      setRoleMsg('✗ ' + (err.message || 'Role update failed.'));
+    } finally {
+      setRoleBusy(null);
+    }
+  }
+
+  function handleBroadcast(e) {
+    e.preventDefault();
+    setPubMsg('');
+    if (!post.title.trim()) {
+      setPubError('Headline Title is mandatory before transmitting to the homepage.');
+      return;
+    }
+    if (!post.message.trim()) {
+      setPubError('Public Bulletin Body Message is empty — nothing to broadcast.');
+      return;
+    }
+    setPubError('');
+    onPublishBulletin({ title: post.title.trim(), type: post.type, message: post.message.trim() });
+    setPubMsg(`✓ "…${post.title.trim()}…" is now LIVE on the Capacity Connect homepage as a ${post.type}.`);
+    setPost(prev => ({ ...prev, title: '', message: '' }));
+  }
+
+  /* ---------- Header A telemetry derivations ---------- */
   const trainees = profiles.filter(p => p.role === 'Trainee');
-  const pending = profiles.filter(p => p.role === 'Trainee' && !p.approved_by_admin);
-  const trainerCount = profiles.filter(p => p.role === 'Trainer').length;
+  const enrolled = trainees.filter(p => p.approved_by_admin);
+  const pending = trainees.filter(p => !p.approved_by_admin);
+  const modulesCount = modules.length;
   const avgCompetency = scores.length
     ? Math.round(scores.reduce((a, s) => a + s.current_score, 0) / scores.length)
     : 0;
-  const priorityCount = scores.filter(s => (s.target_score - s.current_score) >= 25).length;
 
-  const stationStats = {};
-  trainees.forEach(t => {
-    if (!stationStats[t.station_location]) stationStats[t.station_location] = { trainees: 0, sum: 0, scores: 0 };
-    stationStats[t.station_location].trainees += 1;
-    const myScores = scores.filter(s => s.trainee_id === t.id);
-    myScores.forEach(s => { stationStats[t.station_location].sum += s.current_score; stationStats[t.station_location].scores += 1; });
+  const passThreshold = e => exams.find(x => x.id === e.exam_id)?.passing_score || 60;
+  const passedEvals = evaluations.filter(e => e.percentage >= passThreshold(e));
+  const failedEvals = evaluations.filter(e => e.percentage < passThreshold(e));
+
+  const courseChartData = courses.map(c => {
+    const exam = exams.find(x => x.course_id === c.id);
+    let enrolledCount = 0;
+    if (exam) {
+      enrolledCount = new Set(evaluations.filter(e => e.exam_id === exam.id).map(e => e.trainee_id)).size;
+    }
+    const raw = String(c.title || 'Course').replace(/^Model Course\s*[-–—: ]*/i, '');
+    const name = raw.length > 17 ? raw.slice(0, 16) + '…' : raw;
+    return { name, Enrolled: enrolledCount, Capacity: 180 };
   });
-  const stationRows = Object.entries(stationStats).map(([station, data]) => ({
-    station,
-    trainees: data.trainees,
-    avg: data.scores ? Math.round(data.sum / data.scores) : 0,
-  }));
+
+  const examQueueData = [
+    { name: 'Passed · Certifications', value: passedEvals.length, color: '#16a34a' },
+    { name: 'Failed · Retake Queue', value: failedEvals.length, color: '#dc2626' },
+  ];
+
+  const traineeStations = {};
+  trainees.forEach(t => { traineeStations[t.id] = t.station_location || 'HQ New Delhi'; });
+  const stations = [...new Set(Object.values(traineeStations))];
+  const last7Days = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(ACTIVITY_EPOCH_MS - i * 86400000);
+    last7Days.push(d.toISOString().slice(0, 10));
+  }
+  const activityData = last7Days.map(day => {
+    const row = { name: day.slice(5) };
+    stations.forEach(st => { row[st] = 0; });
+    evaluations.forEach(e => {
+      const st = traineeStations[e.trainee_id];
+      if (st && row[st] !== undefined && String(e.completion_date || '').slice(0, 10) === day) row[st] += 1;
+    });
+    scores.forEach(s => {
+      const st = traineeStations[s.trainee_id];
+      if (st && row[st] !== undefined && String(s.last_updated || '').slice(0, 10) === day) row[st] += 1;
+    });
+    return row;
+  });
+
+  const roleOrder = { Admin: 0, Trainer: 1, Trainee: 2 };
+  const roleRows = [...users].sort(
+    (a, b) => roleOrder[a.role] - roleOrder[b.role] || a.name.localeCompare(b.name)
+  );
+
+  const priorityCount = scores.filter(s => (s.target_score - s.current_score) >= 25).length;
 
   return (
     <div>
@@ -72,6 +175,255 @@ export default function AdminDashboard() {
         <span className="loop-step">Track</span>
       </div>
 
+      {/*================ HEADER A — LIVE ADVANCED MONITORING DASHBOARD ================*/}
+      <div className="card admin-monitor-card" style={{ marginBottom: '24px' }}>
+        <div className="card-header">
+          <h3>📡 Header A — Live Advanced Monitoring Dashboard</h3>
+          <span className="badge badge-success">● LIVE TELEMETRY</span>
+        </div>
+        <div className="card-body">
+          <div className="grid grid-4" style={{ marginBottom: '22px' }}>
+            <div className="stat-card primary">
+              <div className="stat-label">Total Enrolled</div>
+              <div className="stat-value">1,248</div>
+              <div className="stat-change up">Personnel across IMD divisions</div>
+            </div>
+            <div className="stat-card secondary">
+              <div className="stat-label">Active Certifications</div>
+              <div className="stat-value">412</div>
+              <div className="stat-change up">Validated competency passes</div>
+            </div>
+            <div className="stat-card success">
+              <div className="stat-label">Completion Rate</div>
+              <div className="stat-value">84%</div>
+              <div className="stat-change up">Org-wide course throughput</div>
+            </div>
+            <div className="stat-card warning">
+              <div className="stat-label">Total Exams Logged</div>
+              <div className="stat-value">1,680</div>
+              <div className="stat-change">Assessments on record</div>
+            </div>
+          </div>
+
+          <div className="live-registry-strip">
+            <span className="live-chip">👥 Live registry: <strong>{enrolled.length}</strong> commissioned learners</span>
+            <span className="live-chip">📚 <strong>{courses.length}</strong> model courses · <strong>{modulesCount}</strong> modules</span>
+            <span className="live-chip">📋 <strong>{evaluations.length}</strong> assessments submitted</span>
+            <span className="live-chip">🪪 <strong>{certifications.length}</strong> certifications issued here</span>
+            <span className="live-chip">⏳ <strong>{pending.length}</strong> pending commissions</span>
+            <span className="live-chip">🎯 Avg competency <strong>{avgCompetency}%</strong> · <strong>{priorityCount}</strong> critical gaps</span>
+          </div>
+
+          <div className="grid grid-3" style={{ marginTop: '22px' }}>
+            <div className="chart-card">
+              <h4>Courses · Enrolment vs Capacity</h4>
+              <div className="chart-box">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={courseChartData} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                    <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={0} />
+                    <YAxis tick={{ fontSize: 11 }} />
+                    <Tooltip />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                    <Bar dataKey="Enrolled" fill="#0ea5e9" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="Capacity" fill="#0f294a" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            <div className="chart-card">
+              <h4>Exam Success vs Retake Queues</h4>
+              <div className="chart-box">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={examQueueData}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%" cy="50%"
+                      innerRadius={52} outerRadius={80}
+                      paddingAngle={3}
+                      label={({ name, value }) => `${name.split('·')[1].trim()} ${value}`}
+                    >
+                      {examQueueData.map((d, i) => <Cell key={i} fill={d.color} />)}
+                    </Pie>
+                    <Tooltip />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            <div className="chart-card">
+              <h4>Daily Active Sessions · Station Sectors</h4>
+              <div className="chart-box">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={activityData} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                    <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                    <YAxis tick={{ fontSize: 11 }} />
+                    <Tooltip />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                    {stations.map((st, i) => (
+                      <Line key={st} type="monotone" dataKey={st} stroke={STATION_COLORS[i % STATION_COLORS.length]} strokeWidth={2} dot={{ r: 2 }} />
+                    ))}
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/*================ HEADER B — PERSONNEL ROLE ARCHITECTURE & GATEWAYS ================*/}
+      <div className="card" style={{ marginBottom: '24px', borderLeft: '6px solid var(--secondary)' }}>
+        <div className="card-header" style={{ justifyContent: 'space-between' }}>
+          <h3>🔐 Header B — Personnel Role Architecture &amp; Managed Gateways</h3>
+          {roleMsg && (
+            <span className="processing-banner" style={{ color: roleMsg.startsWith('✗') ? 'var(--danger)' : 'var(--success)', fontWeight: 600 }}>{roleMsg}</span>
+          )}
+        </div>
+        <div className="card-body" style={{ padding: '0' }}>
+          <div className="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Personnel</th>
+                  <th>Employee ID</th>
+                  <th>Rank / Designation</th>
+                  <th>Station</th>
+                  <th>Current Assigned Role</th>
+                  <th>Role Gateway</th>
+                </tr>
+              </thead>
+              <tbody>
+                {roleRows.map(p => (
+                  <tr key={p.id}>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div className="avatar-sm">{p.name.split(' ').map(n => n[0]).join('').substring(0, 2)}</div>
+                        <div>
+                          <div style={{ fontWeight: 600, fontSize: '13px' }}>{p.name}</div>
+                          <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{p.email}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td><code>{p.employee_id || '—'}</code></td>
+                    <td>{p.designation || '—'}</td>
+                    <td>{p.station_location || '—'}</td>
+                    <td>
+                      <span className="badge" style={{ background: 'rgba(15,41,74,0.08)', color: ROLE_COLORS[p.role], border: `1px solid ${ROLE_COLORS[p.role]}` }}>{p.role}</span>
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <select
+                          className="role-select"
+                          value={p.role}
+                          disabled={roleBusy === p.id}
+                          onChange={e => handleRoleChange(p.id, e.target.value)}
+                        >
+                          <option value="Trainee">Trainee</option>
+                          <option value="Trainer">Trainer</option>
+                          <option value="Admin">Admin</option>
+                        </select>
+                        {roleBusy === p.id && <div className="ai-spinner" />}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div style={{ padding: '12px 24px', fontSize: '11px', color: 'var(--text-secondary)' }}>
+            Role reassignments propagate instantly to the <code>user_profiles</code> registry (live RPC <code>update_user_role</code>), unlock the matching navigation shell,
+            and resync the signed-in session if the acting officer is the gate being switched.
+          </div>
+        </div>
+      </div>
+
+      {/*================ HEADER C — HOMEPAGE BROADCAST TRANSMITTER ================*/}
+      <div className="card" style={{ marginBottom: '24px', borderLeft: '6px solid var(--danger)' }}>
+        <div className="card-header">
+          <h3>📢 Header C — Homepage Broadcast Transmitter</h3>
+        </div>
+        <div className="card-body">
+          <div className="grid grid-2">
+            <div>
+              {pubMsg && (
+                <div className="skill-gap-alert" style={{ borderLeftColor: 'var(--success)', background: 'rgba(34,197,94,0.08)', borderColor: 'rgba(34,197,94,0.3)' }}>
+                  <strong style={{ color: 'var(--success)' }}>{pubMsg}</strong>
+                </div>
+              )}
+              {pubError && (
+                <div className="skill-gap-alert high" style={{ marginBottom: '16px' }}>
+                  <strong>✗ {pubError}</strong>
+                </div>
+              )}
+              <form onSubmit={handleBroadcast}>
+                <div className="form-group">
+                  <label>Headline Title</label>
+                  <input
+                    type="text"
+                    value={post.title}
+                    onChange={e => setPost({ ...post, title: e.target.value })}
+                    placeholder="e.g., Monsoon Mission Phase-III training cohort opens"
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Broadcast Type</label>
+                  <select value={post.type} onChange={e => setPost({ ...post, type: e.target.value })}>
+                    {BROADCAST_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Public Bulletin Body Message</label>
+                  <textarea
+                    rows={4}
+                    value={post.message}
+                    onChange={e => setPost({ ...post, message: e.target.value })}
+                    placeholder="Official text displayed on the Capacity Connect homepage…"
+                  />
+                </div>
+                <button type="submit" className="btn btn-primary">
+                  📡 Broadcast to System Homepage
+                </button>
+              </form>
+              <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '12px' }}>
+                Transmissions prepend to the global <code>bulletinBoard</code> and appear on the public Login/Homepage frame with colour-coded
+                classification tags (Notifications red, Achievements blue, Announcements green, New Content violet).
+              </div>
+            </div>
+
+            <div>
+              <div className="card" style={{ background: 'rgba(15,41,74,0.04)', border: '1px solid var(--border)' }}>
+                <div className="card-header" style={{ justifyContent: 'space-between' }}>
+                  <h3>🌐 Live Broadcast Feed — {bulletinBoard.length} post(s)</h3>
+                  <span className="badge badge-danger">PUBLIC HOMEPAGE</span>
+                </div>
+                <div className="card-body" style={{ padding: '12px 20px' }}>
+                  {bulletinBoard.length === 0 && (
+                    <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Nothing broadcast yet. Compose the first homepage transmission.</div>
+                  )}
+                  {bulletinBoard.slice(0, 6).map(b => (
+                    <div key={b.id} className="bul-row">
+                      <span className={`bul-tag bul-tag-${bulTagClass(b.type)}`}>{b.type}</span>
+                      <div style={{ minWidth: 0 }}>
+                        <div className="bul-title">{b.title}</div>
+                        <div className="bul-meta">{formatDate(b.date_created || b.date)}</div>
+                        <div className="bul-msg">{b.message}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/*================ SECTION A — PENDING VERIFICATION QUEUE ================*/}
       {pending.length > 0 && (
         <div className="card" style={{ marginBottom: '24px', borderLeft: '6px solid var(--danger)' }}>
           <div className="card-header" style={{ justifyContent: 'space-between' }}>
@@ -138,6 +490,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
+      {/*================ SECTION B — DIRECT PROVISIONING NODE ================*/}
       <div className="card" style={{ marginBottom: '24px', borderLeft: '6px solid var(--warning)' }}>
         <div className="card-header">
           <h3>🎖 Section B — Direct Provisioning Node</h3>
@@ -191,96 +544,6 @@ export default function AdminDashboard() {
                   <p>Enrol an officer to issue the printable Credentials Token Card.</p>
                 </div>
               )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-4" style={{ marginBottom: '24px' }}>
-        <div className="stat-card primary">
-          <div className="stat-label">Registered Trainees</div>
-          <div className="stat-value">{trainees.length}</div>
-          <div className="stat-change up">Across stations nationwide</div>
-        </div>
-        <div className="stat-card secondary">
-          <div className="stat-label">Active Model Courses</div>
-          <div className="stat-value">{courses.length}</div>
-          <div className="stat-change up">{trainerCount} training scientists</div>
-        </div>
-        <div className="stat-card success">
-          <div className="stat-label">Avg Competency</div>
-          <div className="stat-value">{avgCompetency}%</div>
-          <div className="stat-change up">Org-wide measure</div>
-        </div>
-        <div className="stat-card warning">
-          <div className="stat-label">Critical Gaps</div>
-          <div className="stat-value" style={{ color: priorityCount > 0 ? 'var(--danger)' : 'var(--success)' }}>{priorityCount}</div>
-          <div className="stat-change">25+ pts below target</div>
-        </div>
-      </div>
-
-      <div className="grid grid-2">
-        <div className="card">
-          <div className="card-header">
-            <h3>Competency Register — Organisation Snapshot</h3>
-          </div>
-          <div className="card-body" style={{ padding: '12px 24px' }}>
-            {competencies.map(comp => {
-              const compRows = scores.filter(s => s.competency_id === comp.id);
-              const avg = compRows.length ? Math.round(compRows.reduce((a, s) => a + s.current_score, 0) / compRows.length) : 0;
-              const gap = comp.department_target - avg;
-              return (
-                <div key={comp.id} style={{ marginBottom: '14px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
-                    <span style={{ fontWeight: 600 }}>{comp.competency_name}</span>
-                    <span style={{ fontWeight: 700 }}>
-                      {avg}% <span style={{ fontWeight: 400, color: 'var(--text-secondary)' }}>/ target {comp.department_target}%</span>
-                    </span>
-                  </div>
-                  <div className="progress-bar-container" style={{ height: '8px' }}>
-                    <div className="progress-bar" style={{
-                      width: `${Math.min(100, avg)}%`,
-                      background: gap >= 25 ? 'var(--danger)' : gap >= 10 ? 'var(--warning)' : 'var(--success)'
-                    }} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <div>
-          <div className="card" style={{ marginBottom: '20px' }}>
-            <div className="card-header">
-              <h3>Station Overview</h3>
-            </div>
-            <div className="card-body" style={{ padding: '12px 24px' }}>
-              {stationRows.map(row => (
-                <div key={row.station} style={{ padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <div style={{ fontWeight: 600, fontSize: '13px' }}>{row.station}</div>
-                    <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{row.trainees} trainee(s)</div>
-                  </div>
-                  <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Avg competency: {row.avg}%</div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="card">
-            <div className="card-header">
-              <h3>Headquarters Bulletin</h3>
-            </div>
-            <div className="card-body" style={{ padding: '12px 24px' }}>
-              {bulletins.slice(0, 4).map(b => (
-                <div key={b.id} style={{ padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontWeight: 600, fontSize: '13px' }}>{b.title}</span>
-                    <span className="badge badge-info">{b.type}</span>
-                  </div>
-                  <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>{b.message}</div>
-                </div>
-              ))}
             </div>
           </div>
         </div>

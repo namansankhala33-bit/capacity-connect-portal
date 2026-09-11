@@ -241,6 +241,24 @@ export const api = {
     return true;
   },
 
+  async updateUserRole(userId, newRole, creds = {}) {
+    const role = String(newRole || '').trim();
+    const validRoles = ['Trainee', 'Trainer', 'Admin'];
+    if (!validRoles.includes(role)) throw new Error('Role must be one of Trainee, Trainer or Admin.');
+    if (isSupabaseConfigured) {
+      return rpc('update_user_role', {
+        p_admin_email: creds.email || '',
+        p_admin_password: creds.password || '',
+        p_profile_id: userId,
+        p_new_role: role,
+      });
+    }
+    setDemoTable('user_profiles', getDemoTable('user_profiles').map(p =>
+      p.id === userId ? { ...p, role } : p
+    ));
+    return true;
+  },
+
   async approveProfile(profileId, approved, creds = {}) {
     if (isSupabaseConfigured) {
       await rpc('admin_toggle_approval', {

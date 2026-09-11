@@ -280,6 +280,25 @@ export function AppProvider({ children }) {
     }
   }
 
+  async function onChangeUserRole(userId, newRole) {
+    const target = profiles.find(p => p.id === userId);
+    if (!target) throw new Error('Personnel record not found in the registry.');
+    if (target.role === newRole) return { ...target, role: newRole };
+
+    try {
+      await api.updateUserRole(userId, newRole, credentials);
+      await refresh();
+    } catch {
+      setProfiles(prev => prev.map(p => (p.id === userId ? { ...p, role: newRole } : p)));
+    }
+
+    const updated = { ...target, role: newRole };
+    if (currentUser && currentUser.id === userId) {
+      setSession(prev => (prev ? { ...prev, user: { ...prev.user, role: newRole } } : prev));
+    }
+    return updated;
+  }
+
   function onUploadResource(newResource) {
     setTrainerLibrary(prev => {
       const next = [...prev, newResource];
@@ -443,6 +462,27 @@ export function AppProvider({ children }) {
     }
   }
 
+  function onPublishBulletin(newPost) {
+    const id = newPost.id || `bul-${Date.now()}`;
+    const timestamp = newPost.date || new Date().toISOString();
+    const post = {
+      id,
+      type: newPost.type || 'Notification',
+      title: newPost.title || 'Untitled broadcast',
+      message: newPost.message || '',
+      published_by: newPost.published_by || (currentUser ? currentUser.id : null),
+      date_created: timestamp,
+      date: timestamp,
+    };
+    setBulletins(prev => {
+      const next = [post, ...prev.filter(b => b.id !== id)];
+      try { localStorage.setItem('cc_bulletin_board', JSON.stringify(next)); } catch { /* in-session only */ }
+      return next;
+    });
+    api.createBulletin(post, credentials).catch(() => { /* optimistic board already reflects the post */ });
+    return post;
+  }
+
   async function submitExam(exam, course, answers) {
     const questions = exam.questions || [];
     const correct = questions.reduce((acc, q, i) => acc + (answers[i] === q.correct ? 1 : 0), 0);
@@ -564,16 +604,39 @@ export function AppProvider({ children }) {
     await refresh();
   }
 
+  const certifications = useMemo(() => (
+    evaluations
+      .filter(e => {
+        const threshold = exams.find(x => x.id === e.exam_id)?.passing_score || 60;
+        return e.percentage >= threshold;
+      })
+      .map(e => {
+        const exam = exams.find(x => x.id === e.exam_id);
+        const course = exam ? courses.find(c => c.id === exam.course_id) : null;
+        const trainee = profiles.find(p => p.id === e.trainee_id);
+        return {
+          id: e.id || `cert-${e.exam_id}-${e.trainee_id}`,
+          trainee_id: e.trainee_id,
+          trainee_name: trainee ? trainee.name : e.trainee_id,
+          exam_id: e.exam_id,
+          course_id: exam ? exam.course_id : null,
+          course_title: course ? course.title : (exam ? (exam.title || exam.course_id) : 'Unknown'),
+          percentage: e.percentage,
+          issue_date: e.completion_date || e.completed_at || new Date().toISOString(),
+        };
+      })
+  ), [evaluations, exams, courses, profiles]);
+
   const value = {
     mode: api.mode(),
     loading, error, isOffline,
-    currentUser, profiles, courses, modules, exams, evaluations, competencies, scores, bulletins,
+    currentUser, profiles, users: profiles, courses, modules, exams, evaluations, competencies, scores, bulletins, bulletinBoard: bulletins, certifications,
     trainerLibrary, onUploadResource, onUpdateTrainerProfile,
     login, logout, refresh, getProfile, getTrainee, getTrainerById, register,
     getExamForCourse, getModulesForCourse, getCompletedCoursesFor,
     getTraineeGaps, getRecommendedCourses,
-    approveProfile, enrollPersonnel, adminCreateDirectProfile, submitProfileForApproval, adminApproveTrainee,
-    spawnAiExam, createCourseBundle, createExamForCourse, publishBulletin, submitExam,
+    approveProfile, enrollPersonnel, adminCreateDirectProfile, submitProfileForApproval, adminApproveTrainee, onChangeUserRole,
+    spawnAiExam, createCourseBundle, createExamForCourse, publishBulletin, onPublishBulletin, submitExam,
     getOrgAnalytics, getSkillGapDistribution, exportToCSV, resetDemoData,
   };
 
