@@ -108,7 +108,6 @@ export const api = {
 
   async login(email, password) {
     const normalized = normalizeEmail(email);
-    const account = demoAccounts.find(a => a.email.toLowerCase() === normalized && a.password === password);
 
     if (isSupabaseConfigured) {
       try {
@@ -132,17 +131,67 @@ export const api = {
       }
     }
 
-    if (!account) return { success: false, message: 'Invalid credentials. Use one of the demo accounts below.' };
-
-    const profile = getDemoTable('user_profiles').find(p => p.id === account.profileId);
-    if (!profile) return { success: false, message: 'Profile not found. Use the Reset button below if data is stale.' };
+    const profile = getDemoTable('user_profiles').find(p => String(p.email || '').toLowerCase() === normalized);
+    if (!profile) return { success: false, message: 'No profile matches this email. Register a new trainee account or use a demo account below.' };
+    if (String(profile.profile_password || '') !== password) return { success: false, message: 'Incorrect password.' };
+    const { profile_password: _pw, ...clean } = profile;
     return {
       success: true,
       user: {
-        ...profile,
+        ...clean,
         accreditation: profile.approved_by_admin ? 'commissioned' : profile.profile_submitted ? 'submitted' : 'locked',
       },
     };
+  },
+
+  async registerTrainee({ name, email, designation, station_location, password = 'demo123' }) {
+    const normalized = normalizeEmail(email);
+    if (!name || !normalized || !designation || !station_location) {
+      return { success: false, message: 'All registration fields are required.' };
+    }
+    if (isSupabaseConfigured) {
+      try {
+        const row = await rpc('register_trainee', {
+          p_email: normalized,
+          p_password: password,
+          p_name: name.trim(),
+          p_designation: designation.trim(),
+          p_station_location: station_location.trim(),
+        });
+        const { profile_password: _pw, ...clean } = row || {};
+        return { success: true, user: { ...clean, accreditation: 'locked' } };
+      } catch (err) {
+        const msg = String(err.message || err.hint || '');
+        if (msg.includes('already exists')) return { success: false, message: 'A profile with this email already exists. Sign in instead.' };
+        return { success: false, message: 'Cloud registration failed. Re-run supabase/schema.sql in the SQL editor.' };
+      }
+    }
+    const rows = getDemoTable('user_profiles');
+    if (rows.some(p => String(p.email || '').toLowerCase() === normalized)) {
+      return { success: false, message: 'A profile with this email already exists. Sign in instead.' };
+    }
+    let badge = `IMD/OPS/RTR-${100 + Math.floor(Math.random() * 900)}`;
+    while (rows.some(p => p.employee_id === badge)) {
+      badge = `IMD/OPS/RTR-${100 + Math.floor(Math.random() * 900)}`;
+    }
+    const created = {
+      id: `prof-${Date.now()}`,
+      employee_id: badge,
+      name: name.trim(),
+      email: normalized,
+      role: 'Trainee',
+      designation: designation.trim(),
+      station_location: station_location.trim(),
+      qualifications: {},
+      work_experience: {},
+      interests: [],
+      approved_by_admin: false,
+      profile_submitted: false,
+      profile_password: password || 'demo123',
+      created_at: new Date().toISOString(),
+    };
+    setDemoTable('user_profiles', [...rows, created]);
+    return { success: true, user: { ...created, accreditation: 'locked' } };
   },
 
   async submitProfileForApproval(traineeId, payload, creds = {}) {

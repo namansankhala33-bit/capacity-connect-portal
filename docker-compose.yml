@@ -1,0 +1,14 @@
+services:
+  capacity-connect:
+    build:
+      context: .
+      args:
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL:-}
+        VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY:-}
+    image: capacity-connect:prod
+    container_name: capacity-connect
+    env_file:
+      - .env.local
+    ports:
+      - "8080:80"
+    restart: always

@@ -16,7 +16,7 @@ delete from public.modules;
 delete from public.courses;
 delete from public.user_profiles;
 
--- ===================== 1. USER PROFILES =============================
+-- ===================== 1.git USER PROFILES =============================
 insert into public.user_profiles (
   employee_id, name, email, role, designation, station_location,
   qualifications, work_experience, interests, approved_by_admin, profile_submitted, profile_password

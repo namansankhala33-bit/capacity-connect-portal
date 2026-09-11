@@ -94,6 +94,16 @@ export function AppProvider({ children }) {
     return result;
   }
 
+  async function register(details) {
+    const result = await api.registerTrainee(details);
+    if (!result.success) throw new Error(result.message || 'Registration failed.');
+    const sess = { user: result.user, password: details.password || 'demo123' };
+    localStorage.setItem('cc_session', JSON.stringify(sess));
+    setSession(sess);
+    await refresh();
+    return result;
+  }
+
   function logout() {
     localStorage.removeItem('cc_session');
     setSession(null);
@@ -508,7 +518,7 @@ export function AppProvider({ children }) {
     mode: api.mode(),
     loading, error, isOffline,
     currentUser, profiles, courses, modules, exams, evaluations, competencies, scores, bulletins,
-    login, logout, refresh, getProfile, getTrainee, getTrainerById,
+    login, logout, refresh, getProfile, getTrainee, getTrainerById, register,
     getExamForCourse, getModulesForCourse, getCompletedCoursesFor,
     getTraineeGaps, getRecommendedCourses,
     approveProfile, enrollPersonnel, adminCreateDirectProfile, submitProfileForApproval, adminApproveTrainee,

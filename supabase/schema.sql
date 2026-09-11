@@ -638,6 +638,68 @@ $$;
 -- ---------- 7. ADMIN ACCREDITATION ENGINE ------------------------
 -- Personnel Enrollment: an authorised Admin issues an officer credentials
 -- token (emulate IMD-2026-MET-<badge>) and creates the Trainee profile.
+create or replace function public.register_trainee(
+  p_email text,
+  p_password text,
+  p_name text,
+  p_designation text,
+  p_station_location text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+volatile
+as $$
+declare
+  v_row public.user_profiles;
+  v_code text;
+begin
+  if exists (
+    select 1 from public.user_profiles where email = lower(trim(p_email))
+  ) then
+    raise exception 'A profile with this email already exists' using errcode = '23505';
+  end if;
+
+  v_code := 'IMD/OPS/RTR-' || lpad((100 + floor(random() * 900))::int::text, 3, '0');
+  while exists (select 1 from public.user_profiles where employee_id = v_code) loop
+    v_code := 'IMD/OPS/RTR-' || lpad((100 + floor(random() * 900))::int::text, 3, '0');
+  end loop;
+
+  insert into public.user_profiles (
+    employee_id,
+    name,
+    email,
+    role,
+    designation,
+    station_location,
+    qualifications,
+    work_experience,
+    interests,
+    approved_by_admin,
+    profile_submitted,
+    profile_password
+  )
+  values (
+    v_code,
+    p_name,
+    lower(trim(p_email)),
+    'Trainee',
+    p_designation,
+    p_station_location,
+    '{}'::jsonb,
+    '{}'::jsonb,
+    '{}'::text[],
+    false,
+    false,
+    coalesce(p_password, 'demo123')
+  )
+  returning * into v_row;
+
+  return to_jsonb(v_row);
+end;
+$$;
+
 create or replace function public.admin_enroll_personnel(
   p_admin_email text,
   p_admin_password text,

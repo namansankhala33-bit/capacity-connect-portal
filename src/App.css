@@ -1005,6 +1005,18 @@ tr:hover td { background: var(--bg); }
 .btn-amber:hover { background: linear-gradient(180deg, #fbbf24, #f59e0b); }
 .btn-amber:disabled { opacity: 0.6; cursor: not-allowed; }
 
+.link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--secondary);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.link-btn:hover { color: var(--primary); }
+
 .plus-btn {
   border: 1px dashed var(--primary);
   background: rgba(14, 165, 233, 0.08);

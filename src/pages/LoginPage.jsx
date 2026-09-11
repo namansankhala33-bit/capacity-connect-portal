@@ -4,10 +4,16 @@ import { useApp } from '../context/AppContext';
 import { demoAccounts } from '../data/imdSeedData';
 
 export default function LoginPage() {
-  const { login, mode, resetDemoData } = useApp();
+  const { login, register, mode, resetDemoData } = useApp();
   const navigate = useNavigate();
+  const [view, setView] = useState('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [regName, setRegName] = useState('');
+  const [regEmail, setRegEmail] = useState('');
+  const [regDesignation, setRegDesignation] = useState('');
+  const [regStation, setRegStation] = useState('');
+  const [regPassword, setRegPassword] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -24,6 +30,25 @@ export default function LoginPage() {
       }
     } catch (err) {
       setError(err.message || 'Sign-in failed');
+    }
+    setBusy(false);
+  }
+
+  async function handleRegister(e) {
+    e.preventDefault();
+    setError('');
+    setBusy(true);
+    try {
+      await register({
+        name: regName,
+        email: regEmail,
+        designation: regDesignation,
+        station_location: regStation,
+        password: regPassword || 'demo123',
+      });
+      navigate('/trainee/dashboard');
+    } catch (err) {
+      setError(err.message || 'Registration failed');
     }
     setBusy(false);
   }
@@ -60,20 +85,63 @@ export default function LoginPage() {
           <p>Ministry of Earth Sciences · India Meteorological Department</p>
         </div>
         <div className="login-body">
-          <form onSubmit={handleSubmit}>
-            <div className="form-group">
-              <label>Official Email</label>
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="officer@imd.gov.in" required />
-            </div>
-            <div className="form-group">
-              <label>Password</label>
-              <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Enter password" required />
-            </div>
-            {error && <p style={{ color: 'var(--danger)', fontSize: '13px', marginBottom: '16px' }}>{error}</p>}
-            <button type="submit" className="btn btn-primary btn-block btn-lg" disabled={busy}>
-              {busy ? 'Authenticating…' : 'Sign In'}
-            </button>
-          </form>
+          {view === 'signin' ? (
+            <form onSubmit={handleSubmit}>
+              <div className="form-group">
+                <label>Official Email</label>
+                <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="officer@imd.gov.in" required />
+              </div>
+              <div className="form-group">
+                <label>Password</label>
+                <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Enter password" required />
+              </div>
+              {error && <p style={{ color: 'var(--danger)', fontSize: '13px', marginBottom: '16px' }}>{error}</p>}
+              <button type="submit" className="btn btn-primary btn-block btn-lg" disabled={busy}>
+                {busy ? 'Authenticating…' : 'Sign In'}
+              </button>
+              <div style={{ marginTop: '12px', textAlign: 'center' }}>
+                <button type="button" className="link-btn" onClick={() => { setView('register'); setError(''); }}>
+                  New Trainee? Register for an IMD Accreditation account →
+                </button>
+              </div>
+            </form>
+          ) : (
+            <form onSubmit={handleRegister}>
+              <div className="form-group">
+                <label>Full Name</label>
+                <input type="text" value={regName} onChange={e => setRegName(e.target.value)} placeholder="e.g., Dr. Ananya Deshpande" required />
+              </div>
+              <div className="form-group">
+                <label>Official Email</label>
+                <input type="email" value={regEmail} onChange={e => setRegEmail(e.target.value)} placeholder="name@imd.gov.in" required />
+              </div>
+              <div className="form-group">
+                <label>Designation</label>
+                <input type="text" value={regDesignation} onChange={e => setRegDesignation(e.target.value)} placeholder="e.g., Met Assistant" required />
+              </div>
+              <div className="form-group">
+                <label>Station Location</label>
+                <input type="text" value={regStation} onChange={e => setRegStation(e.target.value)} placeholder="e.g., RMC Bhubaneswar" required />
+              </div>
+              <div className="form-group">
+                <label>Password</label>
+                <input type="password" value={regPassword} onChange={e => setRegPassword(e.target.value)} placeholder="Create password" />
+              </div>
+              <p style={{ fontSize: '11px', color: 'var(--text-secondary)', margin: '4px 0 12px' }}>
+                Registration commissions no badge automatically — the Director General verifies your credentials in the Accreditation Lock.
+              </p>
+              {error && <p style={{ color: 'var(--danger)', fontSize: '13px', marginBottom: '16px' }}>{error}</p>}
+              <button type="submit" className="btn btn-amber btn-block btn-lg" disabled={busy}>
+                {busy ? 'Registering…' : '🛰 Register & Open Accreditation Lock'}
+              </button>
+              <div style={{ marginTop: '12px', textAlign: 'center' }}>
+                <button type="button" className="link-btn" onClick={() => { setView('signin'); setError(''); }}>
+                  ← Back to Sign In
+                </button>
+              </div>
+            </form>
+          )}
+          {view === 'signin' && (
           <div className="demo-accounts">
             <h4>Demo Accounts — One-Click Access</h4>
             {demoAccounts.map(acc => (
@@ -94,7 +162,8 @@ export default function LoginPage() {
                 ↺ Reset local demo data
               </button>
             )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
