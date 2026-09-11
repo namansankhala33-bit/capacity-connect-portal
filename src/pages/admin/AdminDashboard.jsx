@@ -26,6 +26,30 @@ function formatDate(d) {
   }
 }
 
+function RoleGatewaySelect({ person, busyId, onRoleChange }) {
+  return (
+    <div className="role-gateway">
+      <select
+        className="role-select"
+        value={person.role}
+        disabled={busyId === person.id}
+        onChange={e => onRoleChange(person.id, e.target.value)}
+      >
+        <option value="Trainee">Trainee</option>
+        <option value="Trainer">Trainer</option>
+        <option value="Admin">Admin</option>
+      </select>
+      {busyId === person.id && <div className="ai-spinner" />}
+    </div>
+  );
+}
+
+function renderChips(items, empty) {
+  const list = Array.isArray(items) ? items.filter(Boolean) : [];
+  if (list.length === 0) return <span style={{ fontSize: '12px', color: 'var(--text-light)' }}>{empty}</span>;
+  return list.map((q, i) => <span key={i} className="badge badge-neutral">{q}</span>);
+}
+
 export default function AdminDashboard() {
   const {
     profiles, users, courses, modules, scores,
@@ -285,57 +309,82 @@ export default function AdminDashboard() {
           )}
         </div>
         <div className="card-body" style={{ padding: '0' }}>
-          <div className="table-wrapper">
-            <table>
-              <thead>
-                <tr>
-                  <th>Personnel</th>
-                  <th>Employee ID</th>
-                  <th>Rank / Designation</th>
-                  <th>Station</th>
-                  <th>Current Assigned Role</th>
-                  <th>Role Gateway</th>
-                </tr>
-              </thead>
-              <tbody>
-                {roleRows.map(p => (
-                  <tr key={p.id}>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div className="avatar-sm">{p.name.split(' ').map(n => n[0]).join('').substring(0, 2)}</div>
-                        <div>
-                          <div style={{ fontWeight: 600, fontSize: '13px' }}>{p.name}</div>
-                          <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{p.email}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td><code>{p.employee_id || '—'}</code></td>
-                    <td>{p.designation || '—'}</td>
-                    <td>{p.station_location || '—'}</td>
-                    <td>
-                      <span className="badge" style={{ background: 'rgba(15,41,74,0.08)', color: ROLE_COLORS[p.role], border: `1px solid ${ROLE_COLORS[p.role]}` }}>{p.role}</span>
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <select
-                          className="role-select"
-                          value={p.role}
-                          disabled={roleBusy === p.id}
-                          onChange={e => handleRoleChange(p.id, e.target.value)}
-                        >
-                          <option value="Trainee">Trainee</option>
-                          <option value="Trainer">Trainer</option>
-                          <option value="Admin">Admin</option>
-                        </select>
-                        {roleBusy === p.id && <div className="ai-spinner" />}
-                      </div>
-                    </td>
+          <div className="data-table">
+            <div className="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Personnel</th>
+                    <th>Employee ID</th>
+                    <th>Rank / Designation</th>
+                    <th>Station</th>
+                    <th>Current Assigned Role</th>
+                    <th>Role Gateway</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {roleRows.map(p => (
+                    <tr key={p.id}>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div className="avatar-sm">{p.name.split(' ').map(n => n[0]).join('').substring(0, 2)}</div>
+                          <div>
+                            <div style={{ fontWeight: 600, fontSize: '13px' }}>{p.name}</div>
+                            <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{p.email}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td><code>{p.employee_id || '—'}</code></td>
+                      <td>{p.designation || '—'}</td>
+                      <td>{p.station_location || '—'}</td>
+                      <td>
+                        <span className="badge" style={{ background: 'rgba(15,41,74,0.08)', color: ROLE_COLORS[p.role], border: `1px solid ${ROLE_COLORS[p.role]}` }}>{p.role}</span>
+                      </td>
+                      <td>
+                        <RoleGatewaySelect person={p} busyId={roleBusy} onRoleChange={handleRoleChange} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-          <div style={{ padding: '12px 24px', fontSize: '11px', color: 'var(--text-secondary)' }}>
+
+          <div className="role-card-grid">
+            {roleRows.map(p => (
+              <div className="role-card" key={p.id}>
+                <div className="role-card-top">
+                  <div className="avatar-sm">{p.name.split(' ').map(n => n[0]).join('').substring(0, 2)}</div>
+                  <div className="role-card-person">
+                    <div className="role-card-name">{p.name}</div>
+                    <div className="role-card-detail">{p.email}</div>
+                  </div>
+                </div>
+                <div className="role-card-row">
+                  <span className="role-card-label">Employee ID</span>
+                  <code>{p.employee_id || '—'}</code>
+                </div>
+                <div className="role-card-row">
+                  <span className="role-card-label">Designation</span>
+                  <span>{p.designation || '—'}</span>
+                </div>
+                <div className="role-card-row">
+                  <span className="role-card-label">Station</span>
+                  <span>{p.station_location || '—'}</span>
+                </div>
+                <div className="role-card-row">
+                  <span className="role-card-label">Current Role</span>
+                  <span className="badge" style={{ background: 'rgba(15,41,74,0.08)', color: ROLE_COLORS[p.role], border: `1px solid ${ROLE_COLORS[p.role]}` }}>{p.role}</span>
+                </div>
+                <div className="role-card-row">
+                  <span className="role-card-label">Role Gateway</span>
+                  <RoleGatewaySelect person={p} busyId={roleBusy} onRoleChange={handleRoleChange} />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ padding: '12px 16px', fontSize: '11px', color: 'var(--text-secondary)' }}>
             Role reassignments propagate instantly to the <code>user_profiles</code> registry (live RPC <code>update_user_role</code>), unlock the matching navigation shell,
             and resync the signed-in session if the acting officer is the gate being switched.
           </div>
@@ -469,7 +518,7 @@ export default function AdminDashboard() {
                       </div>
                     ) : (
                       <button type="button" className="btn btn-primary btn-sm" onClick={() => approveRow(p.id)}>
-                        Grant Access&nbsp;&nbsp;&amp;&nbsp;&nbsp;Verify Profile
+                        🎖 Grant Commissioning
                       </button>
                     )}
                   </div>
@@ -550,12 +599,6 @@ export default function AdminDashboard() {
       </div>
     </div>
   );
-}
-
-function renderChips(items, empty) {
-  const list = Array.isArray(items) ? items.filter(Boolean) : [];
-  if (list.length === 0) return <span style={{ fontSize: '12px', color: 'var(--text-light)' }}>{empty}</span>;
-  return list.map((q, i) => <span key={i} className="badge badge-neutral">{q}</span>);
 }
 
 function OfficerTokenCard({ officer }) {

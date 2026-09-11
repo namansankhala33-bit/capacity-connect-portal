@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, NavLink, useLocation } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
 import LoginPage from './pages/LoginPage';
@@ -33,6 +34,18 @@ const traineeLinks = [
   { to: '/trainee/competencies', label: 'Competency Profile', icon: '🎯' },
   { to: '/trainee/skill-gaps', label: 'Skill Gap Analysis', icon: '🔍' },
 ];
+
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
+  useEffect(() => {
+    function onResize() {
+      setIsMobile(window.innerWidth < 768);
+    }
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  return isMobile;
+}
 
 function Sidebar() {
   const { currentUser, logout } = useApp();
@@ -70,18 +83,23 @@ function Sidebar() {
   );
 }
 
-function MobileNav() {
-  const { currentUser } = useApp();
+function BottomDock() {
+  const { currentUser, logout } = useApp();
   const role = currentUser?.role;
   const links = role === 'Admin' ? adminLinks : role === 'Trainer' ? trainerLinks : traineeLinks;
+
   return (
-    <nav className="mobile-nav">
+    <nav className="bottom-dock">
       {links.map(link => (
         <NavLink key={link.to} to={link.to} className={({ isActive }) => isActive ? 'active' : ''}>
-          <span className="icon">{link.icon}</span>
-          {link.label}
+          <span className="dock-icon">{link.icon}</span>
+          <span className="dock-label">{link.label}</span>
         </NavLink>
       ))}
+      <button type="button" className="dock-logout" onClick={logout} aria-label="Sign out">
+        <span className="dock-icon">⎋</span>
+        <span className="dock-label">Exit</span>
+      </button>
     </nav>
   );
 }
@@ -112,14 +130,15 @@ function Topbar({ title }) {
 }
 
 function DashboardShell({ title, children }) {
+  const isMobile = useIsMobile();
   return (
     <div className="app-layout">
-      <Sidebar />
+      {!isMobile && <Sidebar />}
       <main className="main-content">
         <Topbar title={title} />
-        <div className="page-content animate-in">{children}</div>
+        <div className={`page-content animate-in${isMobile ? ' mobile-scroll' : ''}`}>{children}</div>
       </main>
-      <MobileNav />
+      {isMobile && <BottomDock />}
     </div>
   );
 }

@@ -299,6 +299,8 @@ function AccreditationLock({ profile }) {
     : <span style={{ fontSize: '12px', color: 'var(--text-light)' }}>{empty}</span>
   );
 
+  const cn = { borderRadius: '12px', boxShadow: 'var(--shadow)' };
+
   return (
     <div>
       <div className="accred-lock">
@@ -318,7 +320,7 @@ function AccreditationLock({ profile }) {
       </div>
 
       {processing && (
-        <div className="skill-gap-alert normal processing-banner" style={{ marginBottom: '20px' }}>
+        <div className="skill-gap-alert normal processing-banner" style={{ marginBottom: '20px', borderRadius: '12px' }}>
           <div className="ai-spinner" />
           <div>
             <strong>Processing Validation…</strong>
@@ -330,13 +332,13 @@ function AccreditationLock({ profile }) {
       )}
 
       {submitError && (
-        <div className="skill-gap-alert high" style={{ marginBottom: '20px' }}>
+        <div className="skill-gap-alert high" style={{ marginBottom: '20px', borderRadius: '12px' }}>
           <strong>✗ {submitError}</strong>
         </div>
       )}
 
       {phase === 'submitted' && !processing ? (
-        <div className="card animate-in" style={{ borderLeft: '4px solid var(--success)' }}>
+        <div className="card animate-in" style={{ ...cn, borderLeft: '4px solid var(--success)' }}>
           <div className="card-body">
             <div style={{ fontWeight: 700, fontSize: '15px' }}>✅ Credentials Transmitted — Awaiting Commissioning</div>
             <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '6px 0 12px' }}>
@@ -368,15 +370,15 @@ function AccreditationLock({ profile }) {
               <h3>Official Professional Credentials — Dynamic Portfolio Builder</h3>
             </div>
             <div className="card-body">
-              <CredentialList label="Academic Qualifications" hint="e.g., M.Sc. Meteorology, University of Delhi (2021)" kind="q"
+              <PortfolioPanel icon="🎓" label="Academic Qualifications" hint="e.g., M.Sc. Meteorology, University of Delhi (2021)" kind="q"
                 items={qualifications} onChange={update} onRemove={remove} onAdd={() => push('q')} placeholder="M.Sc. Aerology / B.Sc. Physics / Ph.D. …" />
-              <CredentialList label="Operational Work Experience" hint="e.g., 2 Years Cyber Cell Observer, RMC Pune" kind="e"
+              <PortfolioPanel icon="🛰" label="Operational Work Experience" hint="e.g., 2 Years Cyber Cell Observer, RMC Pune" kind="e"
                 items={experience} onChange={update} onRemove={remove} onAdd={() => push('e')} placeholder="e.g., 3 Years Doppler Radar Data Logger" />
-              <CredentialList label="Scientific Interests" hint="e.g., Numerical Weather Prediction, Cyclone Tracking" kind="i"
+              <PortfolioPanel icon="🔬" label="Scientific Interests" hint="e.g., Numerical Weather Prediction, Cyclone Tracking" kind="i"
                 items={interests} onChange={update} onRemove={remove} onAdd={() => push('i')} placeholder="e.g., INSAT-3DR Products" />
 
-              <button className="btn btn-amber btn-lg" style={{ width: '100%' }} onClick={transmit} disabled={processing}>
-                🛰 Transmit Credentials for Commissioning Approval
+              <button className="btn btn-amber btn-lg btn-block" style={{ borderRadius: '12px' }} onClick={transmit} disabled={processing}>
+                🛰 Submit Portfolio for Commissioning Approval
               </button>
             </div>
           </div>
@@ -386,24 +388,22 @@ function AccreditationLock({ profile }) {
   );
 }
 
-function CredentialList({ label, hint, kind, items, onChange, onRemove, onAdd, placeholder }) {
+function PortfolioPanel({ icon, label, hint, kind, items, onChange, onRemove, onAdd, placeholder }) {
   return (
-    <div style={{ marginBottom: '22px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-        <div style={{ fontWeight: 700, fontSize: '14px' }}>{label}</div>
-        <button type="button" className="plus-btn" onClick={onAdd}>＋ Add item</button>
+    <div className="port-panel">
+      <div className="port-panel-header">
+        <div className="port-panel-title">{icon} {label}</div>
+        <button type="button" className="port-add" onClick={onAdd}>＋ Add item</button>
       </div>
-      <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '10px' }}>{hint}</div>
+      <div className="port-panel-hint">{hint}</div>
       {items.map((value, idx) => (
-        <div key={idx} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-          <input type="text" value={value} placeholder={placeholder}
-            onChange={e => onChange(kind, idx, e.target.value)}
-            style={{ flex: 1 }} />
-          <button type="button" className="plus-btn remove" onClick={() => onRemove(kind, idx)} title="Remove item">✕</button>
+        <div className="port-field-row" key={idx}>
+          <input type="text" value={value} placeholder={placeholder} onChange={e => onChange(kind, idx, e.target.value)} />
+          <button type="button" className="port-remove" onClick={() => onRemove(kind, idx)} title="Remove item">✕</button>
         </div>
       ))}
       {items.length === 0 && (
-        <div style={{ fontSize: '12px', color: 'var(--text-light)', border: '1px dashed var(--border)', borderRadius: 'var(--radius)', padding: '12px' }}>
+        <div className="port-empty">
           No entries yet. Click “＋ Add item” to append a credential line.
         </div>
       )}
