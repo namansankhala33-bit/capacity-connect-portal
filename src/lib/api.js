@@ -11,7 +11,7 @@ import {
   demoAccounts,
 } from '../data/imdSeedData';
 
-const DB_VERSION = 'imd-cc-v2';
+const DB_VERSION = 'imd-cc-v3';
 
 function demoLoadAll() {
   const raw = localStorage.getItem(DB_VERSION);

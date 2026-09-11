@@ -598,7 +598,10 @@ export function AppProvider({ children }) {
       setSession(null);
       return;
     }
-    localStorage.removeItem('imd-cc-v1');
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const key = localStorage.key(i);
+      if (key && key.indexOf('imd-cc-') === 0) localStorage.removeItem(key);
+    }
     localStorage.removeItem('cc_session');
     setSession(null);
     await refresh();
