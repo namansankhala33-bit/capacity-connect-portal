@@ -218,6 +218,29 @@ export const api = {
     return true;
   },
 
+  async updateTrainerProfile(userId, fields, creds = {}) {
+    if (isSupabaseConfigured) {
+      return rpc('update_trainer_profile', {
+        p_trainer_email: creds.email || '',
+        p_trainer_password: creds.password || '',
+        p_designation: fields.designation || '',
+        p_specialty: fields.specialty || '',
+        p_station_location: fields.station_location || '',
+      });
+    }
+    setDemoTable('user_profiles', getDemoTable('user_profiles').map(p =>
+      p.id === userId
+        ? {
+            ...p,
+            designation: fields.designation ?? p.designation,
+            specialty: fields.specialty ?? p.specialty,
+            station_location: fields.station_location ?? p.station_location,
+          }
+        : p
+    ));
+    return true;
+  },
+
   async approveProfile(profileId, approved, creds = {}) {
     if (isSupabaseConfigured) {
       await rpc('admin_toggle_approval', {

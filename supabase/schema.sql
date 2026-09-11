@@ -16,6 +16,7 @@ create table if not exists public.user_profiles (
   role text not null check (role in ('Trainee', 'Trainer', 'Admin')),
   designation text not null,
   station_location text not null,
+  specialty text default '',
   qualifications jsonb default '{}'::jsonb,
   work_experience jsonb default '{}'::jsonb,
   interests text[] default '{}',
@@ -26,6 +27,7 @@ create table if not exists public.user_profiles (
 );
 
 alter table public.user_profiles add column if not exists profile_submitted boolean not null default false;
+alter table public.user_profiles add column if not exists specialty text default '';
 
 create table if not exists public.courses (
   id uuid primary key default gen_random_uuid(),
@@ -385,6 +387,45 @@ begin
   end if;
 
   return to_jsonb(v_row);
+end;
+$$;
+
+-- ---------- 2b. TRAINER PROFILE MAINTENANCE --------------------------
+create or replace function public.update_trainer_profile(
+  p_trainer_email text,
+  p_trainer_password text,
+  p_designation text,
+  p_specialty text,
+  p_station_location text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+volatile
+as $$
+declare
+  v_trainer public.user_profiles;
+begin
+  select * into v_trainer
+  from public.user_profiles
+  where role = 'Trainer'
+    and email = lower(trim(p_trainer_email))
+    and profile_password = p_trainer_password
+  limit 1;
+
+  if not found then
+    raise exception 'Unauthorized: valid Trainer credentials required' using errcode = '42501';
+  end if;
+
+  update public.user_profiles
+  set designation = coalesce(nullif(trim(p_designation), ''), designation),
+      specialty = coalesce(nullif(trim(p_specialty), ''), specialty),
+      station_location = coalesce(nullif(trim(p_station_location), ''), station_location)
+  where id = v_trainer.id
+  returning * into v_trainer;
+
+  return to_jsonb(v_trainer);
 end;
 $$;
 

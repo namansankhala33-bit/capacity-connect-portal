@@ -1,8 +1,11 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 
 export default function TrainerDashboard() {
-  const { courses, profiles, competencies, exams, currentUser, spawnAiExam } = useApp();
+  const {
+    courses, profiles, competencies, exams, currentUser,
+    spawnAiExam, trainerLibrary, onUploadResource, onUpdateTrainerProfile,
+  } = useApp();
 
   const [aiCourseId, setAiCourseId] = useState('');
   const [aiBusy, setAiBusy] = useState(false);
@@ -10,12 +13,26 @@ export default function TrainerDashboard() {
   const [aiResult, setAiResult] = useState(null);
   const aiTimer = useRef(null);
 
+  const [profileEdit, setProfileEdit] = useState(false);
+  const [pfDesignation, setPfDesignation] = useState(currentUser?.designation || '');
+  const [pfSpecialty, setPfSpecialty] = useState(currentUser?.specialty || '');
+  const [pfStation, setPfStation] = useState(currentUser?.station_location || '');
+  const [pfBusy, setPfBusy] = useState(false);
+
+  const [resTitle, setResTitle] = useState('');
+  const [resType, setResType] = useState('');
+  const [resDesc, setResDesc] = useState('');
+  const [resFlash, setResFlash] = useState(false);
+  const resTimer = useRef(null);
+
   const myCourses = courses.filter(c => c.trainer_id === currentUser?.id);
   const allCourses = courses;
   const trainees = profiles.filter(p => p.role === 'Trainee' && p.approved_by_admin);
   const trainers = profiles.filter(p => p.role === 'Trainer');
   const totalEnrolled = allCourses.length;
   const examCount = exams.length;
+
+  useEffect(() => () => { clearTimeout(aiTimer.current); clearTimeout(resTimer.current); }, []);
 
   function handleAiCompile() {
     if (!aiCourseId) { setAiError('Select a model course to compile the AI questionnaire for.'); return; }
@@ -34,8 +51,179 @@ export default function TrainerDashboard() {
     }, 1500);
   }
 
+  async function handleProfileSave(e) {
+    e.preventDefault();
+    if (!pfDesignation.trim() || !pfStation.trim()) return;
+    setPfBusy(true);
+    try {
+      await onUpdateTrainerProfile({
+        designation: pfDesignation.trim(),
+        specialty: pfSpecialty.trim(),
+        station_location: pfStation.trim(),
+      });
+      setProfileEdit(false);
+    } catch (err) {
+      window.alert(err.message || 'Profile update failed.');
+    } finally {
+      setPfBusy(false);
+    }
+  }
+
+  function toggleProfileEdit() {
+    if (profileEdit) { setProfileEdit(false); return; }
+    setPfDesignation(currentUser?.designation || '');
+    setPfSpecialty(currentUser?.specialty || '');
+    setPfStation(currentUser?.station_location || '');
+    setProfileEdit(true);
+  }
+
+  function handleResourcePublish(e) {
+    e.preventDefault();
+    if (!resTitle.trim() || !resType || !resDesc.trim()) return;
+    const newResource = {
+      id: `lib-${Date.now()}`,
+      title: resTitle.trim(),
+      type: resType,
+      description: resDesc.trim(),
+      author: currentUser?.name || 'Faculty Member',
+      date: new Date().toISOString().slice(0, 10),
+    };
+    onUploadResource(newResource);
+    setResTitle('');
+    setResType('');
+    setResDesc('');
+    setResFlash(true);
+    clearTimeout(resTimer.current);
+    resTimer.current = setTimeout(() => setResFlash(false), 1500);
+  }
+
   return (
     <div>
+      {/* ── SECTION A ───────────────────────────────────────────────────────── */}
+      <div className="card" style={{ marginBottom: '24px', borderLeft: '6px solid var(--primary)' }}>
+        <div className="card-header" style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+          <h3 style={{ fontSize: '15px', fontWeight: 700 }}>Section A — Faculty Profile Management Node</h3>
+          <button className="btn btn-outline btn-sm" onClick={toggleProfileEdit} disabled={pfBusy}>
+            {profileEdit ? '✕ Cancel' : '⚙ Modify Profile Parameters'}
+          </button>
+        </div>
+        <div className="card-body">
+          {!profileEdit ? (
+            <div className="grid grid-4" style={{ fontSize: '13px' }}>
+              <div>
+                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px', fontWeight: 600 }}>Faculty Name</div>
+                <div style={{ fontWeight: 600 }}>{currentUser?.name || '—'}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px', fontWeight: 600 }}>Designation</div>
+                <div>{currentUser?.designation || '—'}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px', fontWeight: 600 }}>Specialty / Core Domain</div>
+                <div>{currentUser?.specialty || '—'}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px', fontWeight: 600 }}>Station Anchor</div>
+                <div>{currentUser?.station_location || '—'}</div>
+              </div>
+            </div>
+          ) : (
+            <form onSubmit={handleProfileSave} style={{ maxWidth: '620px' }}>
+              <div className="grid grid-2" style={{ gap: '14px', marginBottom: '14px' }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label style={{ fontSize: '12px', fontWeight: 600 }}>Designation (e.g., Scientist-F)</label>
+                  <input value={pfDesignation} onChange={e => setPfDesignation(e.target.value)} required />
+                </div>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label style={{ fontSize: '12px', fontWeight: 600 }}>Specialty / Core Domain</label>
+                  <input value={pfSpecialty} onChange={e => setPfSpecialty(e.target.value)} placeholder="e.g., NWP & Radar Meteorology" />
+                </div>
+              </div>
+              <div className="form-group" style={{ marginBottom: '14px' }}>
+                <label style={{ fontSize: '12px', fontWeight: 600 }}>Station Anchor (e.g., IMD Pune)</label>
+                <input value={pfStation} onChange={e => setPfStation(e.target.value)} required />
+              </div>
+              <button type="submit" className="btn btn-primary btn-sm" disabled={pfBusy || !pfDesignation.trim() || !pfStation.trim()}>
+                {pfBusy ? 'Committing…' : 'Commit Profile Parameters'}
+              </button>
+            </form>
+          )}
+        </div>
+      </div>
+
+      {/* ── SECTION B ───────────────────────────────────────────────────────── */}
+      <div className="card" style={{ marginBottom: '24px', borderLeft: '6px solid var(--warning)' }}>
+        <div className="card-header">
+          <h3 style={{ fontSize: '15px', fontWeight: 700 }}>Section B — Unified Resource Provisioning Library</h3>
+        </div>
+        <div className="card-body">
+          {resFlash && (
+            <div className="skill-gap-alert normal" style={{ marginBottom: '16px', fontWeight: 700, fontSize: '13px' }}>
+              ✓ Scientific Resource Compiled &amp; Broadcasted to Trainee Library Shell!
+            </div>
+          )}
+          <div className="grid grid-2" style={{ gap: '24px' }}>
+            <form onSubmit={handleResourcePublish} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label style={{ fontSize: '12px', fontWeight: 600 }}>Material Title</label>
+                <input
+                  value={resTitle}
+                  onChange={e => setResTitle(e.target.value)}
+                  placeholder="e.g., Doppler Radar VAD Analysis — Training Module"
+                  required
+                />
+              </div>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label style={{ fontSize: '12px', fontWeight: 600 }}>Material Classification</label>
+                <select value={resType} onChange={e => setResType(e.target.value)} required>
+                  <option value="">Select classification…</option>
+                  <option value="Recorded Video Lecture">Recorded Video Lecture</option>
+                  <option value="Telemetry Presentation Slide">Telemetry Presentation Slide</option>
+                  <option value="Operational Manual / Text Guide">Operational Manual / Text Guide</option>
+                </select>
+              </div>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label style={{ fontSize: '12px', fontWeight: 600 }}>Syllabus Scope Description</label>
+                <textarea
+                  value={resDesc}
+                  onChange={e => setResDesc(e.target.value)}
+                  rows={3}
+                  placeholder="Describe the syllabus coverage, target competencies and use-case context…"
+                  required
+                />
+              </div>
+              <button
+                type="submit"
+                className="btn btn-primary btn-lg btn-block"
+                disabled={!resTitle.trim() || !resType || !resDesc.trim()}
+              >
+                Publish Resource to Core Archive
+              </button>
+            </form>
+            <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+              <div style={{ fontWeight: 700, fontSize: '13px', color: 'var(--text-primary)', marginBottom: '10px' }}>
+                Core Archive ({trainerLibrary.length} items)
+              </div>
+              {trainerLibrary.slice().reverse().map(r => (
+                <div key={r.id} style={{ padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
+                  <div style={{ fontWeight: 600, fontSize: '12px' }}>{r.title}</div>
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '3px', flexWrap: 'wrap' }}>
+                    <span className={`badge badge-${r.type.includes('Video') ? 'info' : r.type.includes('Slide') ? 'neutral' : 'success'}`}>
+                      {r.type}
+                    </span>
+                    <span style={{ color: 'var(--text-secondary)' }}>by {r.author} · {r.date}</span>
+                  </div>
+                </div>
+              ))}
+              {trainerLibrary.length === 0 && (
+                <div style={{ fontStyle: 'italic', padding: '16px 0' }}>No resources published yet.</div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── STATS ──────────────────────────────────────────────────────────── */}
       <div className="grid grid-4" style={{ marginBottom: '24px' }}>
         <div className="stat-card primary">
           <div className="stat-label">Model Courses</div>
@@ -60,6 +248,7 @@ export default function TrainerDashboard() {
       </div>
 
       <div className="grid grid-2">
+        {/* ── COURSE CORPUS ──────────────────────────────────────────────── */}
         <div className="card">
           <div className="card-header">
             <h3>Training Programme Corpus</h3>
@@ -98,25 +287,27 @@ export default function TrainerDashboard() {
         </div>
 
         <div>
+          {/* ── QUICK ACTIONS ────────────────────────────────────────────── */}
           <div className="card" style={{ marginBottom: '20px' }}>
             <div className="card-header">
               <h3>Quick Actions</h3>
             </div>
             <div className="card-body">
               <div className="skill-gap-alert normal">
-                <strong>💡 Model Course Protocol:</strong> Author a course with modules tied to WMO meteorological competencies, then design an
+                <strong>Model Course Protocol:</strong> Author a course with modules tied to WMO meteorological competencies, then design an
                 assessment (EXAM_QUESTIONNAIRE) with a submission deadline. Passing assessments automatically re-baseline trainee competency scores.
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '16px' }}>
-                <a href="/trainer/course-builder" className="btn btn-secondary btn-block">📝 Author Model Course →</a>
-                <a href="/trainer/exams" className="btn btn-outline btn-block">📋 Design Assessment & Set Deadline →</a>
+                <a href="/trainer/course-builder" className="btn btn-secondary btn-block">Author Model Course →</a>
+                <a href="/trainer/exams" className="btn btn-outline btn-block">Design Assessment &amp; Set Deadline →</a>
                 <button className="btn btn-outline btn-block" onClick={() => document.getElementById('ai-questionnaire-builder')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>
-                  ⚡ Local-AI Questionnaire Builder
+                  Local-AI Questionnaire Builder
                 </button>
               </div>
             </div>
           </div>
 
+          {/* ── AUTHOR PROFILE ───────────────────────────────────────────── */}
           <div className="card">
             <div className="card-header">
               <h3>My Authoring Profile</h3>
@@ -124,7 +315,8 @@ export default function TrainerDashboard() {
             <div className="card-body" style={{ padding: '12px 24px' }}>
               <div style={{ padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
                 <div style={{ fontWeight: 600, fontSize: '13px' }}>{currentUser?.name}</div>
-                <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{currentUser?.designation} · {currentUser?.station_location}</div>
+                <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{currentUser?.designation} · {currentUser?.specialty}</div>
+                <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{currentUser?.station_location}</div>
               </div>
               <div style={{ padding: '8px 0' }}>
                 <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px' }}>Specialisation interests mapped to competency IDs:</div>
@@ -137,20 +329,21 @@ export default function TrainerDashboard() {
         </div>
       </div>
 
-      <div className="card" id="ai-questionnaire-builder" style={{ borderLeft: '6px solid var(--secondary)' }}>
+      {/* ── AI QUESTIONNAIRE BUILDER ──────────────────────────────────────────── */}
+      <div className="card" id="ai-questionnaire-builder" style={{ borderLeft: '6px solid var(--secondary)', marginTop: '24px' }}>
       <div className="card-header">
-        <h3>🧠 Local-AI Questionnaire Builder</h3>
+        <h3>Local-AI Questionnaire Builder</h3>
       </div>
       <div className="card-body">
         <div className="skill-gap-alert normal" style={{ marginBottom: '16px' }}>
-          <strong>⚙ No external AI APIs.</strong> The builder compiles a pre-formatted complex meteorological questionnaire (Doppler Radar velocity
-          thresholds · BNS compliance tracking) from the local NWP & Satellite Radar syllabus configuration, attaches an active 7-day deadline window,
+          <strong>No external AI APIs.</strong> The builder compiles a pre-formatted complex meteorological questionnaire (Doppler Radar velocity
+          thresholds · BNS compliance tracking) from the local NWP &amp; Satellite Radar syllabus configuration, attaches an active 7-day deadline window,
           and appends it to the global active assessments state.
         </div>
 
         {aiError && (
           <div className="skill-gap-alert high" style={{ marginBottom: '16px' }}>
-            <strong>✗ {aiError}</strong>
+            <strong>{aiError}</strong>
           </div>
         )}
 
@@ -166,7 +359,7 @@ export default function TrainerDashboard() {
           </div>
           <div>
             <button className="btn btn-secondary btn-lg btn-block" onClick={handleAiCompile} disabled={aiBusy || !aiCourseId}>
-              {aiBusy ? 'Compiling…' : '🚀 Compile & Inject AI Questionnaire'}
+              {aiBusy ? 'Compiling…' : 'Compile & Inject AI Questionnaire'}
             </button>
           </div>
         </div>
@@ -175,9 +368,9 @@ export default function TrainerDashboard() {
           <div className="ai-loader animate-in" style={{ marginTop: '20px' }}>
             <div className="ai-spinner" />
             <div>
-              <div style={{ fontWeight: 700, fontSize: '14px' }}>Compiling NWP & Satellite Radar syllabus configurations…</div>
+              <div style={{ fontWeight: 700, fontSize: '14px' }}>Compiling NWP &amp; Satellite Radar syllabus configurations…</div>
               <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                Simulating server pass · generating Doppler velocity & BNS compliance items · stamping 7-day deadline…
+                Simulating server pass · generating Doppler velocity &amp; BNS compliance items · stamping 7-day deadline…
               </div>
             </div>
           </div>
@@ -187,7 +380,7 @@ export default function TrainerDashboard() {
           <div className="card animate-in" style={{ marginTop: '20px', borderLeft: '4px solid var(--success)', background: 'var(--bg)' }}>
             <div className="card-body">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-                <div style={{ fontWeight: 700, fontSize: '15px' }}>✅ Questionnaire compiled & injected</div>
+                <div style={{ fontWeight: 700, fontSize: '15px' }}>Questionnaire compiled &amp; injected</div>
                 <span className="badge badge-success">Appended to global assessments</span>
               </div>
               <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '6px' }}>

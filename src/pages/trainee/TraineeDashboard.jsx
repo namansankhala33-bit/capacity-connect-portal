@@ -5,7 +5,7 @@ import { radarDomains, resolveRadarCompetency } from '../../utils/radarDomains';
 import { useState } from 'react';
 
 export default function TraineeDashboard() {
-  const { currentUser, courses, competencies, getTraineeGaps, getRecommendedCourses, getCompletedCoursesFor, exams, evaluations, scores } = useApp();
+  const { currentUser, courses, competencies, getTraineeGaps, getRecommendedCourses, getCompletedCoursesFor, exams, evaluations, scores, trainerLibrary } = useApp();
 
   const profile = currentUser;
   if (!profile || profile.approved_by_admin !== true) {
@@ -40,6 +40,17 @@ export default function TraineeDashboard() {
     const target = comp ? comp.department_target : 75;
     return { domain: d.short, full: d.label, score, target, gap: Math.max(0, target - score) };
   });
+
+  function downloadResource(resource) {
+    const text = `${resource.title}\n\nType: ${resource.type}\nAuthor: ${resource.author}\nDate: ${resource.date}\n\n${resource.description}\n\nIMD Capacity Connect — Trainer Technical Library (CI/CD onboarding material).`;
+    const blob = new Blob([text], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${resource.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   return (
     <div>
@@ -168,6 +179,49 @@ export default function TraineeDashboard() {
               })}
               {pendingExams.length === 0 && <div className="empty-state"><p>No open assessment windows.</p></div>}
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── KNOWLEDGE HUB ──────────────────────────────────────────────────── */}
+      <div className="card" style={{ marginTop: '24px', borderLeft: '6px solid var(--secondary)' }}>
+        <div className="card-header" style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+          <h3>Knowledge Hub — Trainer Technical Library</h3>
+          <span className="badge badge-info">
+            {trainerLibrary.length} shared resources by IMD faculty
+          </span>
+        </div>
+        <div className="card-body">
+          <div className="library-grid">
+            {trainerLibrary.slice().reverse().map(resource => {
+              const typeClass = resource.type.includes('Video')
+                ? 'lib-type lib-type-video'
+                : resource.type.includes('Slide')
+                  ? 'lib-type lib-type-slide'
+                  : 'lib-type lib-type-manual';
+              const typeIcon = resource.type.includes('Video') ? '🎬' : resource.type.includes('Slide') ? '📊' : '📘';
+              return (
+                <div className="library-card animate-in" key={resource.id}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px' }}>
+                    <span className={typeClass}>{typeIcon} {resource.type}</span>
+                    <span className="badge badge-neutral">{resource.author}</span>
+                  </div>
+                  <div className="library-title">{resource.title}</div>
+                  <div className="library-desc">{resource.description}</div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                    Published {resource.date} · IMD Faculty Archive
+                  </div>
+                  <button className="btn btn-outline btn-sm btn-block" style={{ marginTop: '10px' }} onClick={() => downloadResource(resource)}>
+                    ⬇ Download Study Material
+                  </button>
+                </div>
+              );
+            })}
+            {trainerLibrary.length === 0 && (
+              <div className="empty-state" style={{ gridColumn: '1 / -1' }}>
+                <p>No study materials published yet. Faculty uploads will appear here.</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

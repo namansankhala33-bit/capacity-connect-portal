@@ -16,6 +16,26 @@ function loadSession() {
   }
 }
 
+const MOCK_LIBRARY = [
+  { id: 'lib-1', title: 'NWP Fundamentals — Recorded Lecture', type: 'Recorded Video Lecture', description: 'Operational introduction to the NCUM and GFS model-guidance chains for monsoon forecasting desks, including bias-correction workflows.', author: 'Dr. Someshwar Rao', date: '2026-08-14' },
+  { id: 'lib-2', title: 'Doppler Radar VAD Wind Profiling', type: 'Telemetry Presentation Slide', description: 'Step-by-step slide set covering the velocity azimuth display scanning strategy and dual-doppler mesocyclone identification.', author: 'Dr. Vikram Reddy', date: '2026-08-21' },
+  { id: 'lib-3', title: 'IMD CWC Warning Bulletin SOP', type: 'Operational Manual / Text Guide', description: 'Standard operating procedure for serialised cyclone-warning bulletins under BNS compliance tracking, with template annexures.', author: 'Dr. Someshwar Rao', date: '2026-09-02' },
+  { id: 'lib-4', title: 'INSAT-3DR Sounder Product Suite', type: 'Telemetry Presentation Slide', description: 'Temperature–humidity profile retrieval from the INSAT sounder with regional assimilation exercises and verification metrics.', author: 'Dr. Anita Joshi', date: '2026-09-09' },
+];
+
+function loadTrainerLibrary() {
+  try {
+    const raw = localStorage.getItem('cc_trainer_library');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch {
+    // fall through to seed archive
+  }
+  return MOCK_LIBRARY;
+}
+
 export function AppProvider({ children }) {
   const [session, setSession] = useState(loadSession);
   const [loading, setLoading] = useState(true);
@@ -27,6 +47,7 @@ export function AppProvider({ children }) {
   const [competencies, setCompetencies] = useState([]);
   const [scores, setScores] = useState([]);
   const [bulletins, setBulletins] = useState([]);
+  const [trainerLibrary, setTrainerLibrary] = useState(loadTrainerLibrary);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [error, setError] = useState('');
 
@@ -257,6 +278,35 @@ export function AppProvider({ children }) {
     } catch (err) {
       throw new Error(err.message || 'Approval update failed in the cloud.');
     }
+  }
+
+  function onUploadResource(newResource) {
+    setTrainerLibrary(prev => {
+      const next = [...prev, newResource];
+      try {
+        localStorage.setItem('cc_trainer_library', JSON.stringify(next));
+      } catch {
+        // archive persists in-session even if browser storage is unavailable
+      }
+      return next;
+    });
+  }
+
+  async function onUpdateTrainerProfile(fields) {
+    if (!currentUser) throw new Error('No active session.');
+    const updates = {
+      designation: fields.designation ?? currentUser.designation,
+      specialty: fields.specialty ?? currentUser.specialty,
+      station_location: fields.station_location ?? currentUser.station_location,
+    };
+    try {
+      await api.updateTrainerProfile(currentUser.id, updates, credentials);
+      await refresh();
+    } catch {
+      setProfiles(prev => prev.map(p => p.id === currentUser.id ? { ...p, ...updates } : p));
+      setSession(prev => prev ? { ...prev, user: { ...prev.user, ...updates } } : prev);
+    }
+    return { ...currentUser, ...updates };
   }
 
   async function spawnAiExam(courseId) {
@@ -518,6 +568,7 @@ export function AppProvider({ children }) {
     mode: api.mode(),
     loading, error, isOffline,
     currentUser, profiles, courses, modules, exams, evaluations, competencies, scores, bulletins,
+    trainerLibrary, onUploadResource, onUpdateTrainerProfile,
     login, logout, refresh, getProfile, getTrainee, getTrainerById, register,
     getExamForCourse, getModulesForCourse, getCompletedCoursesFor,
     getTraineeGaps, getRecommendedCourses,

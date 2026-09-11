@@ -1081,3 +1081,49 @@ tr:hover td { background: var(--bg); }
   .accred-row-grid { grid-template-columns: 1fr; }
   .accred-row-action { justify-content: flex-start; }
 }
+
+/* ── Knowledge Hub / Trainer Library ─────────────────────────────── */
+.library-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 14px;
+}
+.library-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+.library-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(15, 41, 74, 0.12);
+  border-color: var(--secondary);
+}
+.lib-type {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  border-radius: 999px;
+  padding: 3px 10px;
+}
+.lib-type-video { background: rgba(14, 165, 233, 0.12); color: #0369a1; }
+.lib-type-slide { background: rgba(245, 158, 11, 0.14); color: #b45309; }
+.lib-type-manual { background: rgba(22, 163, 74, 0.12); color: #15803d; }
+.library-title {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--primary);
+  margin: 10px 0 6px;
+  line-height: 1.35;
+}
+.library-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  min-height: 54px;
+}
