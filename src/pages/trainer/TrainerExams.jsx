@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 
-const EMPTY_QUESTION = { question: '', options: ['', '', '', ''], correct: 0 };
+const EMPTY_QUESTION = { question_text: '', options: ['', '', '', ''], correct_answer_index: 0, marks_weightage: 20 };
 
 export default function TrainerExams() {
   const { currentUser, courses, exams, competencies, createExamForCourse } = useApp();
@@ -41,7 +41,7 @@ export default function TrainerExams() {
     e.preventDefault();
     const deadline = buildDeadline();
     if (!deadline) { setSaved('Set a submission deadline first.'); return; }
-    const cleanQuestions = questions.filter(q => q.question.trim() !== '' && q.options.every(o => o.trim() !== ''));
+    const cleanQuestions = questions.filter(q => q.question_text.trim() !== '' && q.options.every(o => o.trim() !== ''));
     if (cleanQuestions.length === 0) { setSaved('Add at least one valid question.'); return; }
     const competenciesToMap = selectedCourse?.developed_competencies?.length
       ? selectedCourse.developed_competencies
@@ -194,13 +194,13 @@ export default function TrainerExams() {
                   {questions.length > 1 && <button type="button" className="btn btn-danger btn-sm" onClick={() => removeQuestion(idx)}>Remove</button>}
                 </div>
                 <div className="form-group">
-                  <input type="text" value={q.question} onChange={e => updateQuestion(idx, 'question', e.target.value)} placeholder="Meteorological assessment question" />
+                  <input type="text" value={q.question_text} onChange={e => updateQuestion(idx, 'question_text', e.target.value)} placeholder="Meteorological assessment question" />
                 </div>
                 <div className="grid grid-2" style={{ gap: '12px' }}>
                   {q.options.map((opt, oi) => (
                     <div key={oi} className="form-group" style={{ marginBottom: '8px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <input type="radio" name={`correct-${idx}`} checked={q.correct === oi} onChange={() => updateQuestion(idx, 'correct', oi)} />
+                        <input type="radio" name={`correct-${idx}`} checked={q.correct_answer_index === oi} onChange={() => updateQuestion(idx, 'correct_answer_index', oi)} />
                         <input type="text" value={opt} onChange={e => updateOption(idx, oi, e.target.value)} placeholder={`Option ${oi + 1}`} />
                       </div>
                     </div>

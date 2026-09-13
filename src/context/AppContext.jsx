@@ -23,6 +23,395 @@ const MOCK_LIBRARY = [
   { id: 'lib-4', title: 'INSAT-3DR Sounder Product Suite', type: 'Telemetry Presentation Slide', description: 'Temperature–humidity profile retrieval from the INSAT sounder with regional assimilation exercises and verification metrics.', author: 'Dr. Anita Joshi', date: '2026-09-09' },
 ];
 
+const TOPIC_RADAR = [
+  {
+    t: 'radar',
+    question_text: 'For radar gate-to-gate shear, a mesocyclone couplet is operationally flagged when adjacent radial-velocity estimates differ by:',
+    options: [
+      'Exactly 5 m/s over a 10 km stretch',
+      'Greater than or equal to 25 m/s within a 1-2 km separation',
+      'Less than 2 m/s at any range',
+      'Greater than 100 m/s at 50 km',
+    ],
+    correct_answer_index: 1,
+    marks_weightage: 20,
+  },
+  {
+    t: 'radar',
+    question_text: 'Which scanning technique estimates the horizontal wind field by rotating the antenna 360° at a constant elevation angle?',
+    options: [
+      'Base reflectivity single tilt',
+      'Vertically Integrated Liquid (VIL)',
+      'Velocity Azimuth Display (VAD)',
+      'Rain-rate accumulation map',
+    ],
+    correct_answer_index: 2,
+    marks_weightage: 20,
+  },
+  {
+    t: 'radar',
+    question_text: 'When the true radial velocity exceeds the Nyquist velocity, the Doppler velocity display shows:',
+    options: [
+      'Velocity folding (aliasing) that visually reverses the apparent flow direction',
+      'A permanent echo-free core in the storm centre',
+      'An automatic rejection of the entire storm volume',
+      'Enhanced reflectivity only, with velocity censored',
+    ],
+    correct_answer_index: 0,
+    marks_weightage: 20,
+  },
+  {
+    t: 'radar',
+    question_text: 'A reflectivity value of 65 dBZ in a warm-season thunderstorm most plausibly indicates:',
+    options: [
+      'Light drizzle',
+      'Thin cirrus cloud',
+      'Very large hail and/or heavily ice-loaded cells',
+      'Boundary layer fog',
+    ],
+    correct_answer_index: 2,
+    marks_weightage: 20,
+  },
+];
+
+const TOPIC_NWP = [
+  {
+    t: 'nwp',
+    question_text: 'In the operational NWP chain used by IMD forecast desks, bias correction is applied primarily to:',
+    options: [
+      'Translate systematic model errors so model guidance aligns closer to observed climatology and recent persistence',
+      'Remove all convective parameterization from the model',
+      'Increase the vertical resolution of the output grid',
+      'Replace satellite observations with radiosonde data',
+    ],
+    correct_answer_index: 0,
+    marks_weightage: 20,
+  },
+  {
+    t: 'nwp',
+    question_text: 'Data assimilation in NWP blends observations with the model background primarily to:',
+    options: [
+      'Store raw observations for the archive',
+      'Produce an analysed state closer to the true atmosphere for the next forecast cycle',
+      'Reduce the model domain size',
+      'Delay the forecast initialisation time',
+    ],
+    correct_answer_index: 1,
+    marks_weightage: 20,
+  },
+  {
+    t: 'nwp',
+    question_text: 'A higher horizontal resolution in the forecast model generally:',
+    options: [
+      'Degrades the representation of orography',
+      'Makes the output valid for a longer period',
+      'Resolves finer mesoscale detail such as convective organisation and terrain-driven circulations',
+      'Eliminates the need for ensemble members',
+    ],
+    correct_answer_index: 2,
+    marks_weightage: 20,
+  },
+  {
+    t: 'nwp',
+    question_text: 'Ensemble NWP is used at the forecast desk because it:',
+    options: [
+      'Supplies a single deterministic answer',
+      'Quantifies forecast uncertainty across perturbed initial conditions and model versions',
+      'Replaces satellite interpretation entirely',
+      'Only computes climate means',
+    ],
+    correct_answer_index: 1,
+    marks_weightage: 20,
+  },
+];
+
+const TOPIC_SATELLITE = [
+  {
+    t: 'satellite',
+    question_text: 'The INSAT-3DR sounder product suite retrieves which primary atmospheric profiles?',
+    options: [
+      'Temperature–humidity profiles feeding regional assimilation and verification exercises',
+      'Ocean salinity only',
+      'Surface vegetation indices',
+      'Urban heat island mapping',
+    ],
+    correct_answer_index: 0,
+    marks_weightage: 20,
+  },
+  {
+    t: 'satellite',
+    question_text: 'Water-vapour channel imagery is most useful at the desk for:',
+    options: [
+      'Brightness of the land surface at night',
+      'Tracing mid-upper level moisture advection and jet-stream features',
+      'Measuring surface rainfall totals directly',
+      'Determining sea-surface temperature to 0.01 K precision',
+    ],
+    correct_answer_index: 1,
+    marks_weightage: 20,
+  },
+  {
+    t: 'satellite',
+    question_text: 'Satellite cloud-top temperature colder than the surrounding anvil suggests:',
+    options: [
+      'A weaker updraft',
+      'A capping inversion',
+      'Rapid overshooting updraft with likely intense convection',
+      'Complete dissipation of the storm',
+    ],
+    correct_answer_index: 2,
+    marks_weightage: 20,
+  },
+  {
+    t: 'satellite',
+    question_text: 'The main limitation of visible-band geostationary imagery is:',
+    options: [
+      'No capability after local sunset',
+      'Poor resolution during the day',
+      'Inability to detect clouds over ocean',
+      'Saturation in all polar regions',
+    ],
+    correct_answer_index: 0,
+    marks_weightage: 20,
+  },
+];
+
+const TOPIC_SEVERE = [
+  {
+    t: 'severe',
+    question_text: 'A squall line (QLCS) passage at a station typically poses the highest threat from:',
+    options: [
+      'Damaging straight-line winds and intense rainfall along the leading edge',
+      'Slowly rotating weak mesoscale vortices only',
+      'Persistent elevated fog',
+      'Quiet subsidence warming',
+    ],
+    correct_answer_index: 0,
+    marks_weightage: 20,
+  },
+  {
+    t: 'severe',
+    question_text: 'A persistent, deep, rotating updraft feature on Doppler radar is the defining signature of a:',
+    options: [
+      'Squall line',
+      'Supercell thunderstorm',
+      'Tropical depression',
+      'Fog bank',
+    ],
+    correct_answer_index: 1,
+    marks_weightage: 20,
+  },
+  {
+    t: 'severe',
+    question_text: 'The three-body scatter spike on radar is traditionally associated with which hazard?',
+    options: [
+      'Dense fog',
+      'Freezing drizzle',
+      'Very large hail',
+      'Blowing dust',
+    ],
+    correct_answer_index: 2,
+    marks_weightage: 20,
+  },
+  {
+    t: 'severe',
+    question_text: 'A tornado warning should be considered when radar indicates:',
+    options: [
+      'A persistent tornadic vortex signature / strong low-level velocity couplet',
+      'Any echo top above 8 km',
+      'Lightning is detected overhead',
+      'One isolated reflectivity cell below threshold',
+    ],
+    correct_answer_index: 0,
+    marks_weightage: 20,
+  },
+];
+
+const TOPIC_BNS = [
+  {
+    t: 'bns',
+    question_text: 'Under BNS (Bulletin & Notification System) compliance tracking, every disseminated warning bulletin must carry:',
+    options: [
+      'A machine-readable header with series number, timestamp, product origin and validity period',
+      'Only the forecaster’s personal remarks',
+      'A blank template for the next shift',
+      'Raw model output in binary form',
+    ],
+    correct_answer_index: 0,
+    marks_weightage: 20,
+  },
+  {
+    t: 'bns',
+    question_text: 'When a warning bulletin is revised under BNS compliance, the amended product must:',
+    options: [
+      'Be silently merged into the next scheduled bulletin',
+      'Discard the previous bulletin from the record',
+      'Be issued as a fresh serialised version with its own timestamp and appended to the audit log',
+      'Wait for the next weekly review',
+    ],
+    correct_answer_index: 2,
+    marks_weightage: 20,
+  },
+  {
+    t: 'bns',
+    question_text: 'The colour-coded tier in a severe-weather bulletin primarily signals:',
+    options: [
+      'The agency that issued the product',
+      'The intensity and immediacy of the biological risk',
+      'The forecast confidence level of the issuing desk',
+      'The archiving priority of the bulletin',
+    ],
+    correct_answer_index: 2,
+    marks_weightage: 20,
+  },
+  {
+    t: 'bns',
+    question_text: 'Which field is mandatory in a compliant bulletin header for traceability?',
+    options: [
+      'Product origin and validity period',
+      'Forecaster’s personal mobile number',
+      'Office gossip section',
+      'Blank annexure',
+    ],
+    correct_answer_index: 0,
+    marks_weightage: 20,
+  },
+];
+
+const TOPIC_HYDROCLIMATE = [
+  {
+    t: 'hydroclimate',
+    question_text: 'Flash flood guidance is most directly derived from:',
+    options: [
+      'Quantitative precipitation estimates/forecasts compared against basin saturation thresholds',
+      'Persistent high pressure anomalies',
+      'Sea-surface temperature alone',
+      'Tidal amplitude',
+    ],
+    correct_answer_index: 0,
+    marks_weightage: 20,
+  },
+  {
+    t: 'hydroclimate',
+    question_text: 'The monsoon onset over Kerala is declared operationally when:',
+    options: [
+      'Pre-monsoon showers occur over the Western Ghats only',
+      'Consistent criteria for rainfall depth, wind field and OLR are satisfied over the region',
+      'Sea surface temperature crosses 25 °C anywhere in the Bay',
+      'The first low pressure system forms in the Arabian Sea',
+    ],
+    correct_answer_index: 1,
+    marks_weightage: 20,
+  },
+  {
+    t: 'hydroclimate',
+    question_text: 'The Madden–Julian Oscillation influences monsoon activity primarily through:',
+    options: [
+      'Modulating convective activity on 30–60 day time scales',
+      'Daily tidal cycles',
+      'Changing the Earth’s rotation rate',
+      'Saturating the visible satellite channel',
+    ],
+    correct_answer_index: 0,
+    marks_weightage: 20,
+  },
+  {
+    t: 'hydroclimate',
+    question_text: 'A "1-in-100-year" flood statement at the hydrology desk implies:',
+    options: [
+      'It will never recur',
+      'An average annual exceedance probability of about 1%',
+      'It occurs every single year',
+      'Confidence of absolute containment',
+    ],
+    correct_answer_index: 1,
+    marks_weightage: 20,
+  },
+];
+
+const TOPIC_AVIATION = [
+  {
+    t: 'aviation',
+    question_text: 'A SIGMET is operationally issued when:',
+    options: [
+      'No significant weather exists over 24 hours',
+      'En-route hazardous weather such as severe turbulence, severe icing, volcanic ash or thunderstorms is expected',
+      'Surface fog lifts completely',
+      'A routine TAF is amended twice',
+    ],
+    correct_answer_index: 1,
+    marks_weightage: 20,
+  },
+  {
+    t: 'aviation',
+    question_text: 'Low-level wind shear reports at an aerodrome are critical because they:',
+    options: [
+      'Affect aircraft performance and approach stability near the runway',
+      'Increase the visibility automatically',
+      'Shift the runway identifier',
+      'Reduce the cloud base',
+    ],
+    correct_answer_index: 0,
+    marks_weightage: 20,
+  },
+  {
+    t: 'aviation',
+    question_text: 'For Category I instrument approach operations, the controlling reportable elements are:',
+    options: [
+      'Above-limit precipitation totals',
+      'Runway drainage rate',
+      'Cloud ceiling and runway visual range (RVR)',
+      'Wind direction preference of the tower',
+    ],
+    correct_answer_index: 2,
+    marks_weightage: 20,
+  },
+  {
+    t: 'aviation',
+    question_text: 'Standard ATC practice requires aircraft to route around isolated thunderstorms maintaining a buffer of at least:',
+    options: [
+      '20 nautical miles where the storm tops extend into the en-route flight levels',
+      '1 nautical mile',
+      '5 km over open water',
+      'No lateral separation at all',
+    ],
+    correct_answer_index: 0,
+    marks_weightage: 20,
+  },
+];
+
+const AI_QUESTION_BANK = [
+  ...TOPIC_RADAR,
+  ...TOPIC_NWP,
+  ...TOPIC_SATELLITE,
+  ...TOPIC_SEVERE,
+  ...TOPIC_BNS,
+  ...TOPIC_HYDROCLIMATE,
+  ...TOPIC_AVIATION,
+];
+
+const COURSE_TOPIC_MAP = {
+  'Radar Meteorology': ['radar', 'severe'],
+  'Forecasting Science': ['nwp', 'severe'],
+  'Remote Sensing': ['satellite', 'nwp'],
+  'Severe Weather': ['severe', 'radar', 'bns'],
+  'Applied Services': ['bns', 'aviation'],
+  'Hydrometeorology': ['hydroclimate'],
+  'Climate Science': ['hydroclimate', 'nwp'],
+  'Aviation': ['aviation', 'bns'],
+};
+
+const ALL_TOPICS = ['radar', 'nwp', 'satellite', 'severe', 'bns', 'hydroclimate', 'aviation'];
+
+function shuffleArray(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 function loadTrainerLibrary() {
   try {
     const raw = localStorage.getItem('cc_trainer_library');
@@ -328,75 +717,36 @@ export function AppProvider({ children }) {
     return { ...currentUser, ...updates };
   }
 
+  function generateExamQuestions(courseId) {
+    const course = courses.find(c => c.id === courseId);
+    if (!course) throw new Error('Select a model course to compile the questionnaire for.');
+    const topics = COURSE_TOPIC_MAP[course.category] || ALL_TOPICS;
+    const pool = AI_QUESTION_BANK.filter(q => topics.includes(q.t));
+    const selected = shuffleArray(pool.length >= 5 ? pool : AI_QUESTION_BANK).slice(0, 5);
+    return selected.map((q, i) => ({
+      id: `ai-q-${Date.now()}-${i + 1}`,
+      question_text: q.question_text,
+      options: q.options,
+      correct_answer_index: q.correct_answer_index,
+      marks_weightage: 20,
+    }));
+  }
+
   async function spawnAiExam(courseId) {
     const course = courses.find(c => c.id === courseId);
     if (!course) throw new Error('Select a model course to compile the questionnaire for.');
     const deadline = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-    const questions = [
-      {
-        id: `ai-q-${Date.now()}-1`,
-        question: 'When the true radial velocity exceeds the Nyquist velocity, a Doppler radar velocity display shows:',
-        options: [
-          'Velocity folding (aliasing) that visually reverses the apparent flow direction',
-          'A permanent echo-free core in the storm centre',
-          'An automatic rejection of the entire storm volume',
-          'Enhanced reflectivity only, with velocity censored',
-        ],
-        correct: 0,
-      },
-      {
-        id: `ai-q-${Date.now()}-2`,
-        question: 'For radar gate-to-gate shear, a mesocyclone couplet is operationally flagged when adjacent radial-velocity estimates differ by:',
-        options: [
-          'Greater than or equal to 25 m/s within a 1-2 km separation',
-          'Exactly 5 m/s over 10 km',
-          'Less than 2 m/s at any range',
-          'Greater than 100 m/s at 50 km',
-        ],
-        correct: 1,
-      },
-      {
-        id: `ai-q-${Date.now()}-3`,
-        question: 'Under BNS (Bulletin & Notification System) compliance tracking, every disseminated warning bulletin must carry:',
-        options: [
-          'A machine-readable header with series number, timestamp, product origin and validity period',
-          'Only the forecaster\u2019s personal remarks',
-          'A blank template for the next shift',
-          'Raw model output in binary form',
-        ],
-        correct: 0,
-      },
-      {
-        id: `ai-q-${Date.now()}-4`,
-        question: 'Which radar product is used to estimate the horizontal wind field by scanning 360 degrees at a constant elevation angle?',
-        options: [
-          'Velocity Azimuth Display (VAD)',
-          'Base reflectivity single tilt',
-          'Vertically Integrated Liquid (VIL)',
-          'Rain-rate accumulation map',
-        ],
-        correct: 2,
-      },
-      {
-        id: `ai-q-${Date.now()}-5`,
-        question: 'For BNS compliance, when a warning bulletin is revised, the amended product must:',
-        options: [
-          'Be issued as a fresh serialised version with its own timestamp and appended to the audit log',
-          'Be silently merged into the next scheduled bulletin',
-          'Discard the previous bulletin from the record',
-          'Wait for the next weekly review',
-        ],
-        correct: 3,
-      },
-    ];
-    const created = await createExamForCourse({
+    const questions = generateExamQuestions(courseId);
+    const existing = exams.find(e => e.course_id === courseId);
+    const payload = {
       course_id: courseId,
       questions,
       passing_score: 60,
       submission_deadline: deadline.toISOString(),
       competencies: course.developed_competencies || [],
-    });
-    return { exam: created, course, questions, deadline };
+    };
+    const created = await createExamForCourse(payload, existing);
+    return { exam: created, course, questions, deadline, updated: Boolean(existing) };
   }
 
   async function approveProfile(profileId, approved) {
@@ -433,16 +783,23 @@ export function AppProvider({ children }) {
     }
   }
 
-  async function createExamForCourse(examPayload) {
+  async function createExamForCourse(examPayload, existingExam) {
+    const payload = { is_active: true, submitted: false, score: null, ...examPayload };
     try {
-      const created = api.mode() === 'live'
-        ? await api.createExam(examPayload, credentials)
-        : await api.createExam(examPayload);
-      if (api.mode() === 'demo' && examPayload.competencies && examPayload.competencies.length > 0 && currentUser) {
-        await api.updateTrainerCompetencyProfile(currentUser.id, examPayload.competencies);
+      const existing = existingExam || exams.find(e => e.course_id === payload.course_id);
+      let created;
+      if (existing) {
+        created = await api.updateExam(existing.id, payload);
+      } else {
+        created = api.mode() === 'live'
+          ? await api.createExam(payload, credentials)
+          : await api.createExam(payload);
+      }
+      if (api.mode() === 'demo' && payload.competencies && payload.competencies.length > 0 && currentUser) {
+        await api.updateTrainerCompetencyProfile(currentUser.id, payload.competencies);
       }
       await refresh();
-      return created;
+      return existing ? { ...existing, ...payload, id: existing.id } : created;
     } catch (err) {
       throw new Error(err.message || 'Assessment publish failed in the cloud.');
     }
@@ -485,7 +842,7 @@ export function AppProvider({ children }) {
 
   async function submitExam(exam, course, answers) {
     const questions = exam.questions || [];
-    const correct = questions.reduce((acc, q, i) => acc + (answers[i] === q.correct ? 1 : 0), 0);
+    const correct = questions.reduce((acc, q, i) => acc + (answers[i] === (q.correct_answer_index ?? q.correct) ? 1 : 0), 0);
     const pct = Math.round((correct / questions.length) * 100);
     const passed = pct >= (exam.passing_score || 60);
     const traineeId = currentUser.id;
@@ -630,16 +987,33 @@ export function AppProvider({ children }) {
       })
   ), [evaluations, exams, courses, profiles]);
 
+  const active_assessments = useMemo(() => {
+    const now = new Date();
+    return exams
+      .filter(ex => new Date(ex.submission_deadline) > now)
+      .map(ex => {
+        const course = courses.find(c => c.id === ex.course_id) || null;
+        return {
+          id: ex.id,
+          course_id: ex.course_id,
+          course_title: course ? course.title : ex.course_id,
+          questions: ex.questions,
+          passing_score: ex.passing_score,
+          submission_deadline: ex.submission_deadline,
+        };
+      });
+  }, [exams, courses]);
+
   const value = {
     mode: api.mode(),
     loading, error, isOffline,
-    currentUser, profiles, users: profiles, courses, modules, exams, evaluations, competencies, scores, bulletins, bulletinBoard: bulletins, certifications,
+    currentUser, profiles, users: profiles, courses, modules, exams, evaluations, competencies, scores, bulletins, bulletinBoard: bulletins, certifications, active_assessments,
     trainerLibrary, onUploadResource, onUpdateTrainerProfile,
     login, logout, refresh, getProfile, getTrainee, getTrainerById, register,
     getExamForCourse, getModulesForCourse, getCompletedCoursesFor,
     getTraineeGaps, getRecommendedCourses,
     approveProfile, enrollPersonnel, adminCreateDirectProfile, submitProfileForApproval, adminApproveTrainee, onChangeUserRole,
-    spawnAiExam, createCourseBundle, createExamForCourse, publishBulletin, onPublishBulletin, submitExam,
+    spawnAiExam, generateExamQuestions, createCourseBundle, createExamForCourse, publishBulletin, onPublishBulletin, submitExam,
     getOrgAnalytics, getSkillGapDistribution, exportToCSV, resetDemoData,
   };
 

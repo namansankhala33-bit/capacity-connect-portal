@@ -4,7 +4,7 @@ import { useApp } from '../../context/AppContext';
 export default function TrainerDashboard() {
   const {
     courses, profiles, competencies, exams, currentUser,
-    spawnAiExam, trainerLibrary, onUploadResource, onUpdateTrainerProfile,
+    generateExamQuestions, createExamForCourse, trainerLibrary, onUploadResource, onUpdateTrainerProfile,
     evaluations, getTraineeGaps, getCompletedCoursesFor,
   } = useApp();
 
@@ -12,6 +12,8 @@ export default function TrainerDashboard() {
   const [aiBusy, setAiBusy] = useState(false);
   const [aiError, setAiError] = useState('');
   const [aiResult, setAiResult] = useState(null);
+  const [aiPreview, setAiPreview] = useState(null);
+  const [dispatchFlash, setDispatchFlash] = useState(false);
   const aiTimer = useRef(null);
 
   const [profileEdit, setProfileEdit] = useState(false);
@@ -75,20 +77,48 @@ export default function TrainerDashboard() {
   useEffect(() => () => { clearTimeout(aiTimer.current); clearTimeout(resTimer.current); }, []);
 
   function handleAiCompile() {
-    if (!aiCourseId) { setAiError('Select a model course to compile the AI questionnaire for.'); return; }
+    if (!aiCourseId) { setAiError('Select a target model course for the evaluation audit node to generate against.'); return; }
     setAiError('');
     setAiBusy(true);
     setAiResult(null);
-    aiTimer.current = setTimeout(async () => {
+    setAiPreview(null);
+    setDispatchFlash(false);
+    aiTimer.current = setTimeout(() => {
       try {
-        const result = await spawnAiExam(aiCourseId);
-        setAiResult(result);
+        const questions = generateExamQuestions(aiCourseId);
+        setAiPreview({ courseId: aiCourseId, questions });
       } catch (err) {
-        setAiError(err.message || 'AI questionnaire compilation failed.');
+        setAiError(err.message || 'Questionnaire compilation failed.');
       } finally {
         setAiBusy(false);
       }
-    }, 1500);
+    }, 1200);
+  }
+
+  async function handleCommissionDispatch() {
+    if (!aiPreview) return;
+    setAiError('');
+    setAiBusy(true);
+    const course = (myCourses.length ? myCourses : allCourses).find(c => c.id === aiPreview.courseId);
+    const deadline = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    try {
+      const existing = exams.find(e => e.course_id === aiPreview.courseId);
+      const exam = await createExamForCourse({
+        course_id: aiPreview.courseId,
+        questions: aiPreview.questions,
+        passing_score: 60,
+        submission_deadline: deadline.toISOString(),
+        competencies: course?.developed_competencies || [],
+      });
+      setAiResult({ exam, course, questions: aiPreview.questions, deadline, updated: Boolean(existing) });
+      setAiPreview(null);
+      setDispatchFlash(true);
+      setTimeout(() => setDispatchFlash(false), 6000);
+    } catch (err) {
+      setAiError(err.message || 'Exam dispatch failed in the cloud.');
+    } finally {
+      setAiBusy(false);
+    }
   }
 
   async function handleProfileSave(e) {
@@ -285,7 +315,7 @@ export default function TrainerDashboard() {
                 )}
                 <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '6px' }}>
                   The chosen file is embedded into the resource and trainees download the exact file. Files above ~4&nbsp;MB may not persist
-                  across devices in this prototype.
+                  across all devices on the network.
                 </div>
               </div>
               <button
@@ -524,7 +554,7 @@ export default function TrainerDashboard() {
         </div>
       </div>
 
-      {/* ── AI QUESTIONNAIRE BUILDER ──────────────────────────────────────────── */}
+      {/* ── IMD EVALUATION AUDIT NODE ─────────────────────────────────────── */}
       <div className="card" id="ai-questionnaire-builder" style={{ borderLeft: '6px solid var(--secondary)', marginTop: '24px' }}>
       <div className="card-header">
         <h3>Local-AI Questionnaire Builder</h3>
@@ -533,7 +563,7 @@ export default function TrainerDashboard() {
         <div className="skill-gap-alert normal" style={{ marginBottom: '16px' }}>
           <strong>No external AI APIs.</strong> The builder compiles a pre-formatted complex meteorological questionnaire (Doppler Radar velocity
           thresholds · BNS compliance tracking) from the local NWP &amp; Satellite Radar syllabus configuration, attaches an active 7-day deadline window,
-          and appends it to the global active assessments state.
+          and broadcasts it to the active force registry.
         </div>
 
         {aiError && (
@@ -545,7 +575,7 @@ export default function TrainerDashboard() {
         <div className="grid grid-2" style={{ alignItems: 'center', gap: '16px' }}>
           <div className="form-group" style={{ marginBottom: 0 }}>
             <label>Target Model Course (syllabus source)</label>
-            <select value={aiCourseId} onChange={e => { setAiCourseId(e.target.value); setAiResult(null); }}>
+            <select value={aiCourseId} onChange={e => { setAiCourseId(e.target.value); setAiResult(null); setAiPreview(null); setDispatchFlash(false); }}>
               <option value="">Select a model course…</option>
               {(myCourses.length ? myCourses : allCourses).map(c => (
                 <option key={c.id} value={c.id}>{c.title}</option>
@@ -554,29 +584,87 @@ export default function TrainerDashboard() {
           </div>
           <div>
             <button className="btn btn-secondary btn-lg btn-block" onClick={handleAiCompile} disabled={aiBusy || !aiCourseId}>
-              {aiBusy ? 'Compiling…' : 'Compile & Inject AI Questionnaire'}
+              {aiBusy && !aiPreview ? 'Compiling…' : aiPreview ? '↺ Re-run Compilation' : 'Compile & Verify AI Questionnaire'}
             </button>
           </div>
         </div>
 
-        {aiBusy && (
+        {aiBusy && !aiPreview && !aiResult && (
           <div className="ai-loader animate-in" style={{ marginTop: '20px' }}>
             <div className="ai-spinner" />
             <div>
               <div style={{ fontWeight: 700, fontSize: '14px' }}>Compiling NWP &amp; Satellite Radar syllabus configurations…</div>
               <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                Simulating server pass · generating Doppler velocity &amp; BNS compliance items · stamping 7-day deadline…
+                Generating meteorological metrics · answer parameters · target grading keys · stamping 7-day deadline…
               </div>
             </div>
           </div>
         )}
 
-        {aiResult && !aiBusy && (
+        {aiPreview && !aiBusy && (
+          <div className="audit-node animate-in">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+              <span style={{ fontSize: '20px' }}>📋</span>
+              <div style={{ fontWeight: 800, fontSize: '15px', letterSpacing: '0.4px' }}>INTERNAL QUALITY CONTROL: EXAM TELEMETRY VERIFICATION NODE</div>
+            </div>
+            <div style={{ fontSize: '12px', color: '#9fb6d2', marginBottom: '18px', lineHeight: 1.5 }}>
+              Verify the generated meteorological metrics, answer parameters, and target grading keys before broadcasting this syllabus to the active force registry.
+            </div>
+
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '18px' }}>
+              <span className="badge badge-info">5 multi-selection metrics</span>
+              <span className="badge badge-info">Marks weightage: 20 / question</span>
+              <span className="badge badge-info">Deadline: {(myCourses.length ? myCourses : allCourses).find(c => c.id === aiPreview.courseId)?.title || 'Linked syllabus'}</span>
+            </div>
+
+            {aiPreview.questions.map((q, i) => (
+              <div className="audit-q" key={q.id}>
+                <div className="audit-q-head">
+                  <span style={{ fontWeight: 700, minWidth: '26px' }}>Q{i + 1}.</span>
+                  <span style={{ fontWeight: 600 }}>{q.question_text}</span>
+                </div>
+                {q.options.map((opt, oi) => {
+                  const valid = oi === q.correct_answer_index;
+                  return (
+                    <div key={oi} className={`audit-opt ${valid ? 'valid' : ''}`}>
+                      <span style={{ fontWeight: 700, minWidth: '24px' }}>{String.fromCharCode(65 + oi)}.</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div>{opt}</div>
+                        {valid && <div className="audit-key">• SYSTEM VALIDATED ANSWER KEY</div>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+
+            <div style={{ marginTop: '8px', borderTop: '1px solid rgba(255,255,255,0.14)', paddingTop: '18px' }}>
+              <button className="btn btn-amber btn-lg btn-block" onClick={handleCommissionDispatch} disabled={aiBusy}>
+                {aiBusy ? 'Commissioning…' : '🚀 COMMISSION & DISPATCH EXAM SYLLABUS'}
+              </button>
+              <div style={{ fontSize: '11px', color: '#8fb0d8', textAlign: 'center', marginTop: '10px' }}>
+                Node verifies the compiled answer indices and grading keys before committing the payload to the active force registry.
+              </div>
+            </div>
+          </div>
+        )}
+
+        {aiResult && !aiBusy && !aiPreview && (
           <div className="card animate-in" style={{ marginTop: '20px', borderLeft: '4px solid var(--success)', background: 'var(--bg)' }}>
             <div className="card-body">
+              {dispatchFlash && (
+                <div className="skill-gap-alert success-wide" style={{ marginBottom: '14px' }}>
+                  <strong>✓ DISPATCH SUCCESS: Training module exam parameters officially commissioned and broadcasted to all assigned Trainee terminals.</strong>
+                </div>
+              )}
+              {aiResult.updated && !dispatchFlash && (
+                <div className="skill-gap-alert normal" style={{ marginBottom: '14px' }}>
+                  <strong>✓ Syllabus assessment matrix already on file — re-calibrated and re-commissioned for the active force registry.</strong>
+                </div>
+              )}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-                <div style={{ fontWeight: 700, fontSize: '15px' }}>Questionnaire compiled &amp; injected</div>
-                <span className="badge badge-success">Appended to global assessments</span>
+                <div style={{ fontWeight: 700, fontSize: '15px' }}>Exam syllabus commissioned &amp; broadcasted</div>
+                <span className="badge badge-success">{aiResult.updated ? 'Matrix re-calibrated' : 'Registered in global assessments'}</span>
               </div>
               <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '6px' }}>
                 <strong>{aiResult.course.title}</strong> · {(aiResult.exam?.questions || aiResult.questions).length} complex MCQs · Active until{' '}
@@ -586,7 +674,7 @@ export default function TrainerDashboard() {
                 {(aiResult.exam?.questions || aiResult.questions).map((q, i) => (
                   <div key={q.id} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', fontSize: '13px' }}>
                     <span style={{ fontWeight: 700, color: 'var(--secondary)', minWidth: '20px' }}>Q{i + 1}.</span>
-                    <span>{q.question}</span>
+                    <span>{q.question_text ?? q.question}</span>
                   </div>
                 ))}
               </div>

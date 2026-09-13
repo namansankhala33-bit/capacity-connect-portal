@@ -346,6 +346,29 @@ export const api = {
     return row;
   },
 
+  async updateExam(examId, exam) {
+    if (isSupabaseConfigured) {
+      const { error } = await supabase
+        .from('exam_questionnaires')
+        .update({
+          questions: exam.questions || [],
+          passing_score: exam.passing_score,
+          submission_deadline: exam.submission_deadline,
+        })
+        .eq('id', examId);
+      if (error) throw new Error(error.message);
+      return { ...exam, id: examId };
+    }
+    const rows = getDemoTable('exam_questionnaires');
+    const existing = rows.find(r => r.id === examId);
+    if (existing) {
+      setDemoTable('exam_questionnaires', rows.map(r => r.id === examId ? { ...r, ...exam, id: examId } : r));
+    } else {
+      setDemoTable('exam_questionnaires', [...rows, { ...exam, id: examId }]);
+    }
+    return { ...exam, id: examId };
+  },
+
   async updateTrainerCompetencyProfile(trainerId, competencyIds) {
     if (isSupabaseConfigured) {
       const { error } = await supabase

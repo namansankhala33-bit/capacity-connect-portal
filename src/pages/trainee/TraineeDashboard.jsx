@@ -5,7 +5,15 @@ import { radarDomains, resolveRadarCompetency } from '../../utils/radarDomains';
 import { useState } from 'react';
 
 export default function TraineeDashboard() {
-  const { currentUser, courses, competencies, getTraineeGaps, getRecommendedCourses, getCompletedCoursesFor, exams, evaluations, scores, trainerLibrary } = useApp();
+  const { currentUser, courses, competencies, getTraineeGaps, getRecommendedCourses, getCompletedCoursesFor, exams, evaluations, scores, trainerLibrary, submitExam } = useApp();
+
+  const [activeExam, setActiveExam] = useState(null);
+  const [quizAnswers, setQuizAnswers] = useState({});
+  const [quizCurrent, setQuizCurrent] = useState(0);
+  const [quizSubmitted, setQuizSubmitted] = useState(false);
+  const [quizResult, setQuizResult] = useState(null);
+  const [quizBusy, setQuizBusy] = useState(false);
+  const [quizError, setQuizError] = useState('');
 
   const profile = currentUser;
   if (!profile || profile.approved_by_admin !== true) {
@@ -25,11 +33,11 @@ export default function TraineeDashboard() {
   const avgCompetency = myScores.reduce((a, c) => a + c.current_score, 0) / Math.max(1, myScores.length);
 
   const myEvals = evaluations.filter(e => e.trainee_id === profile.id).length;
-  const pendingExams = exams.filter(ex => {
-    const c = courses.find(x => x.id === ex.course_id);
-    if (!c) return false;
-    return !completedCourses.includes(c.id) && new Date(ex.submission_deadline) > new Date();
-  });
+  const activeTraineeExams = exams.filter(exam =>
+    exam.is_active !== false &&
+    !exam.submitted &&
+    new Date(exam.submission_deadline) > new Date()
+  );
 
   const scoreMap = {};
   scores.filter(s => s.trainee_id === profile.id).forEach(s => { scoreMap[s.competency_id] = s.current_score; });
@@ -66,6 +74,34 @@ export default function TraineeDashboard() {
     a.download = `${resource.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}.txt`;
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  function resetQuiz() {
+    setActiveExam(null);
+    setQuizAnswers({});
+    setQuizCurrent(0);
+    setQuizSubmitted(false);
+    setQuizResult(null);
+    setQuizBusy(false);
+    setQuizError('');
+  }
+
+  function selectQuizAnswer(qIndex, optIndex) {
+    setQuizAnswers(prev => ({ ...prev, [qIndex]: optIndex }));
+  }
+
+  async function submitQuiz() {
+    setQuizBusy(true);
+    setQuizError('');
+    const course = courses.find(c => c.id === activeExam.course_id);
+    try {
+      const res = await submitExam(activeExam, course || { id: activeExam.course_id }, quizAnswers);
+      setQuizResult(res);
+      setQuizSubmitted(true);
+    } catch (err) {
+      setQuizError(err.message || 'Assessment upload failed in the cloud.');
+    }
+    setQuizBusy(false);
   }
 
   return (
@@ -115,7 +151,7 @@ export default function TraineeDashboard() {
         </div>
         <div className="stat-card warning">
           <div className="stat-label">Pending Assessments</div>
-          <div className="stat-value">{pendingExams.length}</div>
+          <div className="stat-value">{activeTraineeExams.length}</div>
           <div className="stat-change">Open until deadline</div>
         </div>
       </div>
@@ -178,22 +214,34 @@ export default function TraineeDashboard() {
 
           <div className="card" style={{ marginTop: '20px' }}>
             <div className="card-header">
-              <h3>Assessment Windows</h3>
+              <h3>Upcoming Assessments / Pending Evaluations</h3>
             </div>
             <div className="card-body" style={{ padding: '12px 24px' }}>
-              {pendingExams.slice(0, 4).map(exam => {
-                const course = courses.find(c => c.id === exam.course_id);
+              {activeTraineeExams.map(exam => {
+                const course = courses.find(c => c.id === exam.course_id) || { title: exam.course_title || 'Open Assessment Window' };
                 const daysLeft = Math.ceil((new Date(exam.submission_deadline) - new Date()) / 86400000);
                 return (
-                  <div key={exam.id} style={{ padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
-                    <div style={{ fontWeight: 600, fontSize: '13px' }}>{course?.title}</div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                      Deadline {new Date(exam.submission_deadline).toLocaleDateString('en-IN')} · {daysLeft} day(s) remaining
+                  <div key={exam.id} style={{ padding: '14px 0', borderBottom: '1px solid var(--border)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontWeight: 600, fontSize: '13px' }}>{course.title}</div>
+                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                          {exam.questions ? `${exam.questions.length} MCQ(s) · 20 marks each` : ''} · Deadline{' '}
+                          {new Date(exam.submission_deadline).toLocaleDateString('en-IN')} · {daysLeft} day(s) remaining
+                        </div>
+                      </div>
+                      <button
+                        className="btn btn-success"
+                        style={{ minHeight: '44px', padding: '10px 18px', fontSize: '13px', fontWeight: 700 }}
+                        onClick={() => setActiveExam(exam)}
+                      >
+                        Attempt Assessment →
+                      </button>
                     </div>
                   </div>
                 );
               })}
-              {pendingExams.length === 0 && <div className="empty-state"><p>No open assessment windows.</p></div>}
+              {activeTraineeExams.length === 0 && <div className="empty-state"><p>No open assessment windows.</p></div>}
             </div>
           </div>
         </div>
@@ -246,6 +294,95 @@ export default function TraineeDashboard() {
           </div>
         </div>
       </div>
+
+      {activeExam && (
+        <div
+          onClick={resetQuiz}
+          style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(2,8,20,0.72)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', backdropFilter: 'blur(3px)' }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            className="quiz-container"
+            style={{ width: '100%', maxWidth: '720px', maxHeight: '92vh', overflowY: 'auto', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '22px', boxSizing: 'border-box' }}
+          >
+            {!quizSubmitted ? (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px', marginBottom: '16px' }}>
+                  <div>
+                    <div style={{ fontSize: '16px', fontWeight: 700 }}>{courses.find(c => c.id === activeExam.course_id)?.title || activeExam.course_title || 'Scheduled Assessment'}</div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                      {activeExam.questions ? `${activeExam.questions.length} MCQ(s) · 20 marks each · Pass at ${activeExam.passing_score || 60}%` : ''}{' '}
+                      · Deadline {new Date(activeExam.submission_deadline).toLocaleString('en-IN')}
+                    </div>
+                  </div>
+                  <button className="btn btn-outline btn-sm" onClick={resetQuiz}>× Close</button>
+                </div>
+
+                {quizError && (
+                  <div className="skill-gap-alert high" style={{ marginBottom: '16px' }}><strong>✗ {quizError}</strong></div>
+                )}
+
+                {activeExam.questions && activeExam.questions.length > 0 ? (
+                  <>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                      <span style={{ fontSize: '14px', fontWeight: 600 }}>Question {quizCurrent + 1} of {activeExam.questions.length}</span>
+                      <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{Object.keys(quizAnswers).length}/{activeExam.questions.length} answered</span>
+                    </div>
+                    <div className="progress-bar-container" style={{ marginBottom: '20px' }}>
+                      <div className="progress-bar blue" style={{ width: `${(Object.keys(quizAnswers).length / activeExam.questions.length) * 100}%` }} />
+                    </div>
+
+                    <div className="quiz-question">
+                      <h4>{activeExam.questions[quizCurrent]?.question_text ?? activeExam.questions[quizCurrent]?.question}</h4>
+                      {activeExam.questions[quizCurrent]?.options.map((opt, oi) => {
+                        const isSelected = quizAnswers[quizCurrent] === oi;
+                        return (
+                          <button key={oi} className={`quiz-option ${isSelected ? 'selected' : ''}`} onClick={() => selectQuizAnswer(quizCurrent, oi)}>
+                            <span style={{ fontWeight: 700, marginRight: '8px' }}>{String.fromCharCode(65 + oi)}.</span>
+                            {opt}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                      <button className="btn btn-outline" onClick={() => setQuizCurrent(Math.max(0, quizCurrent - 1))} disabled={quizCurrent === 0}>← Previous</button>
+                      {quizCurrent < activeExam.questions.length - 1 ? (
+                        <button className="btn btn-secondary" onClick={() => setQuizCurrent(quizCurrent + 1)}>Next →</button>
+                      ) : (
+                        <button className="btn btn-success" onClick={submitQuiz} disabled={Object.keys(quizAnswers).length < activeExam.questions.length || quizBusy}>
+                          {quizBusy ? 'Submitting…' : Object.keys(quizAnswers).length < activeExam.questions.length ? `Answer all ${activeExam.questions.length} to submit` : 'Submit Assessment ✓'}
+                        </button>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <div className="empty-state"><p>Assessment payload contains no questions.</p></div>
+                )}
+              </>
+            ) : (
+              <div className="card animate-in" style={{ borderLeft: '4px solid var(--success)', background: 'var(--bg)' }}>
+                <div className="card-body">
+                  <div style={{ fontSize: '16px', fontWeight: 700, marginBottom: '8px' }}>
+                    {quizResult && quizResult.passed ? '✓ Assessment Passed' : 'Assessment Submitted'}
+                  </div>
+                  {quizResult && (
+                    <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '12px' }}>
+                      Score: <strong>{quizResult.score}%</strong> · {quizResult.correct} / {quizResult.total} correct · Pass threshold {activeExam.passing_score || 60}%
+                    </div>
+                  )}
+                  {quizResult && quizResult.passed && quizResult.boosted && quizResult.boosted.length > 0 && (
+                    <div style={{ fontSize: '12px', marginBottom: '12px' }}>
+                      Competency index boosted: {quizResult.boosted.map(b => `${b.competency_name} ${b.from}→${b.to}`).join(' · ')}
+                    </div>
+                  )}
+                  <button className="btn btn-primary btn-block" onClick={resetQuiz}>Close Assessment</button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

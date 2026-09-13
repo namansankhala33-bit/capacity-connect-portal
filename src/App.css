@@ -562,6 +562,12 @@ tr:hover td { background: var(--bg); }
   border-left-color: var(--warning);
 }
 
+.skill-gap-alert.success-wide {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+  border-left-color: var(--success);
+}
+
 .recommendation-card {
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -1633,5 +1639,74 @@ tr:hover td { background: var(--bg); }
   .demo-btn {
     min-height: 48px;
     padding: 14px;
+  }
+}
+
+/* ============ Evaluation audit node — exam telemetry verification ============ */
+.audit-node {
+  margin-top: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, rgba(8, 20, 36, 0.92), rgba(8, 20, 36, 0.98));
+  color: #fff;
+  padding: 20px;
+  box-sizing: border-box;
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.audit-q {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.045);
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  box-sizing: border-box;
+}
+
+.audit-q-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.audit-opt {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  margin-top: 8px;
+  font-size: 13px;
+  color: #dbe4f0;
+  box-sizing: border-box;
+}
+
+.audit-opt.valid {
+  border: 2px solid var(--success);
+  background: rgba(34, 197, 94, 0.12);
+}
+
+.audit-key {
+  margin-top: 3px;
+  color: #4ade80;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+}
+
+@media (max-width: 768px) {
+  .audit-node {
+    padding: 14px;
+    max-height: none;
+  }
+  .audit-q {
+    padding: 12px;
+  }
+  .audit-opt {
+    font-size: 12px;
   }
 }

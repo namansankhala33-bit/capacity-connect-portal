@@ -180,7 +180,7 @@ function QuizView({ course, onExit }) {
               </div>
 
               <div className="quiz-question">
-                <h4>{questions[currentQuestion]?.question}</h4>
+                <h4>{questions[currentQuestion]?.question_text ?? questions[currentQuestion]?.question}</h4>
                 {questions[currentQuestion]?.options.map((opt, idx) => {
                   const isSelected = answers[currentQuestion] === idx;
                   return (

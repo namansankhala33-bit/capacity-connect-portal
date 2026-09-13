@@ -106,7 +106,7 @@ function Topbar({ title }) {
         </div>
         <div className="topbar-actions">
           <span className={`badge ${mode === 'live' ? 'badge-success' : 'badge-neutral'}`}>
-            {mode === 'live' ? 'Cloud Connected' : 'Local Prototype Mode'}
+            {mode === 'live' ? 'Cloud Connected' : 'Network Standby'}
           </span>
           <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
             {new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}

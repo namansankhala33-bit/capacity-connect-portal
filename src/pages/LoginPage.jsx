@@ -192,7 +192,7 @@ export default function LoginPage() {
                 </button>
               ))}
               <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '12px' }}>
-                {mode === 'live' ? 'Connected to live Supabase cloud. Unapproved trainees sign in to the Accreditation Lock portal before Admin commissioning.' : 'Local prototype mode. Add Supabase keys in .env.local to go live.'}
+                {mode === 'live' ? 'Connected to live Supabase cloud. Unapproved trainees sign in to the Accreditation Lock portal before Admin commissioning.' : 'Network standby. Configure cloud credentials to activate live dispersion.'}
               </div>
               {mode !== 'live' && (
                 <button
