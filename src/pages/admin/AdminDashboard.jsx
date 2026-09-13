@@ -553,7 +553,7 @@ export default function AdminDashboard() {
                 </div>
               )}
               <form onSubmit={handleEnrollSubmit}>
-                <div className="grid grid-2" style={{ gap: '12px' }}>
+                <div className="provision-grid">
                   <div className="form-group">
                     <label>Officer Name</label>
                     <input type="text" value={enroll.name} onChange={e => setEnroll({ ...enroll, name: e.target.value })} placeholder="e.g., Dr. Meera Joshi" required />
@@ -563,7 +563,7 @@ export default function AdminDashboard() {
                     <input type="email" value={enroll.email} onChange={e => setEnroll({ ...enroll, email: e.target.value })} placeholder="name@imd.gov.in" required />
                   </div>
                 </div>
-                <div className="grid grid-2" style={{ gap: '12px' }}>
+                <div className="provision-grid">
                   <div className="form-group">
                     <label>Rank / Designation</label>
                     <input type="text" value={enroll.designation} onChange={e => setEnroll({ ...enroll, designation: e.target.value })} placeholder="e.g., Scientist-C" required />

@@ -241,7 +241,7 @@ body {
   .sidebar { display: none; }
   .main-content { margin-left: 0; }
   .mobile-nav { display: flex; }
-  .page-content { padding: 16px; padding-bottom: 80px; }
+  .page-content { padding: 15px; padding-bottom: 90px; box-sizing: border-box; }
   .topbar { padding: 0 16px; }
 }
 
@@ -1394,7 +1394,7 @@ tr:hover td { background: var(--bg); }
 
 .bottom-dock .dock-logout { color: rgba(239, 68, 68, 0.8); }
 
-.mobile-scroll { padding-bottom: 80px; }
+.mobile-scroll { padding-bottom: 90px; }
 
 /* ============ Responsive Overhaul — Admin Adaptive Role Grid ============ */
 .data-table { display: block; }
@@ -1450,6 +1450,17 @@ tr:hover td { background: var(--bg); }
 
 .role-gateway .role-select { flex: 1; min-width: 0; }
 
+/* Provisioning Hub — single column on mobile, paired rows on desktop */
+.provision-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 768px) {
+  .provision-grid { grid-template-columns: 1fr; }
+}
+
 /* ============ Responsive Overhaul — Pending Verification Cards ============ */
 @media (max-width: 768px) {
   .accred-row {
@@ -1467,12 +1478,12 @@ tr:hover td { background: var(--bg); }
 
 /* ============ Responsive Overhaul — Trainee Portfolio Panels ============ */
 .port-panel {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
   border-radius: 12px;
-  box-shadow: var(--shadow);
-  padding: 18px;
-  margin-bottom: 18px;
+  box-shadow: 0 4px 20px rgba(10, 30, 54, 0.04);
+  padding: 20px;
+  margin-bottom: 20px;
   transition: box-shadow 0.2s ease;
 }
 
@@ -1494,11 +1505,12 @@ tr:hover td { background: var(--bg); }
 .port-field-row input {
   flex: 1;
   width: 100%;
+  box-sizing: border-box;
   min-width: 0;
-  padding: 12px 14px;
+  padding: 12px;
   border: 1px solid var(--border);
-  border-radius: 10px;
-  font-size: 16px;
+  border-radius: 8px;
+  font-size: 14px;
   color: var(--text);
   background: var(--bg-card);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
