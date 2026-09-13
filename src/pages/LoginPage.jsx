@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
+import { useIsMobile } from '../utils/useIsMobile';
 import { demoAccounts } from '../data/imdSeedData';
 
 function bulTagClass(type) {
@@ -21,6 +22,7 @@ function formatDate(d) {
 
 export default function LoginPage() {
   const { login, register, mode, resetDemoData, bulletinBoard } = useApp();
+  const isMobile = useIsMobile();
   const navigate = useNavigate();
   const [view, setView] = useState('signin');
   const [email, setEmail] = useState('');
@@ -94,8 +96,29 @@ export default function LoginPage() {
 
   return (
     <div className="login-page">
-      <div className="login-split">
-        <div className="home-feed">
+      <div
+        className="login-split"
+        style={{
+          display: 'flex',
+          flexDirection: isMobile ? 'column' : 'row',
+          alignItems: isMobile ? 'center' : 'stretch',
+          justifyContent: 'center',
+          width: '100%',
+          maxWidth: '1200px',
+          margin: '0 auto',
+          gap: '30px',
+          padding: '20px',
+          boxSizing: 'border-box',
+        }}
+      >
+        <div
+          className="home-feed"
+          style={{
+            width: isMobile ? '100%' : '50%',
+            minWidth: isMobile ? '100%' : '400px',
+            boxSizing: 'border-box',
+          }}
+        >
           <div className="home-feed-header">
             <div className="home-feed-title">
               <span className="home-feed-live" />
@@ -124,7 +147,14 @@ export default function LoginPage() {
           <div className="home-feed-foot">{bulletinBoard.length} transmission(s) on the homepage</div>
         </div>
 
-        <div className="login-card">
+        <div
+          className="login-card"
+          style={{
+            width: isMobile ? '100%' : '50%',
+            minWidth: isMobile ? '100%' : '400px',
+            boxSizing: 'border-box',
+          }}
+        >
           <div className="login-header">
             <h1>Capacity Connect</h1>
             <p>IMD Workforce Development Platform</p>
