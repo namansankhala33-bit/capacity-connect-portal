@@ -1,4 +1,5 @@
 import { supabase, isSupabaseConfigured } from '../utils/supabaseClient';
+import { uuidv4 } from '../utils/uuid';
 import {
   user_profiles as seedProfiles,
   courses as seedCourses,
@@ -329,19 +330,33 @@ export const api = {
 
   async createExam(exam, creds = {}) {
     if (isSupabaseConfigured) {
-      return rpc('insert_exam', {
+      const row = {
+        course_id: exam.course_id,
+        questions: exam.questions || [],
+        passing_score: exam.passing_score ?? 60,
+        submission_deadline: exam.submission_deadline,
+      };
+      if (exam.id) row.id = exam.id;
+      const { data, error } = await supabase
+        .from('exam_questionnaires')
+        .insert([row])
+        .select()
+        .single();
+      if (!error && data) return { ...exam, ...data };
+      const server = await rpc('insert_exam', {
         p_trainer_email: creds.email || '',
         p_trainer_password: creds.password || '',
         p_exam: {
           course_id: exam.course_id,
           questions: exam.questions || [],
-          passing_score: exam.passing_score,
+          passing_score: exam.passing_score ?? 60,
           submission_deadline: exam.submission_deadline,
           competencies: exam.competencies || [],
         },
       });
+      return { ...exam, ...server };
     }
-    const row = { ...exam, id: `exam-${Date.now()}`, questions: exam.questions || [] };
+    const row = { ...exam, id: exam.id || uuidv4(), questions: exam.questions || [] };
     setDemoTable('exam_questionnaires', [...getDemoTable('exam_questionnaires'), row]);
     return row;
   },
@@ -390,7 +405,7 @@ export const api = {
       if (error) throw new Error(error.message);
       return data;
     }
-    const row = { ...evalRow, id: `eval-${Date.now()}` };
+    const row = { ...evalRow, id: evalRow.id || uuidv4() };
     setDemoTable('evaluation_logs', [...getDemoTable('evaluation_logs'), row]);
     return row;
   },

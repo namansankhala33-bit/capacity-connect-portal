@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { api } from '../lib/api';
+import { uuidv4 } from '../utils/uuid';
 
 const AppContext = createContext(null);
 
@@ -805,6 +806,37 @@ export function AppProvider({ children }) {
     }
   }
 
+  async function onDispatchNewExam(examPayload) {
+    const fallbackDeadline = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    const deadline = examPayload.deadline || examPayload.submission_deadline || fallbackDeadline;
+    const payload = {
+      ...examPayload,
+      id: examPayload.id || uuidv4(),
+      title: (examPayload.title || '').trim() || 'Untitled Assessment',
+      subject: (examPayload.subject || '').trim() || 'General Meteorology',
+      deadline: deadline || fallbackDeadline,
+      submission_deadline: deadline || fallbackDeadline,
+      is_active: examPayload.is_active !== false,
+    };
+    let created;
+    if (api.mode() === 'live') {
+      const existing = exams.find(e => e.course_id === payload.course_id);
+      if (existing) {
+        await api.updateExam(existing.id, payload);
+        created = { ...existing, ...payload, id: existing.id };
+      } else {
+        created = await api.createExam(payload, credentials);
+      }
+    } else {
+      created = await api.createExam(payload);
+    }
+    setExams(prev => [...prev.filter(e => e.id !== created.id), created]);
+    if (api.mode() === 'demo' && payload.competencies && payload.competencies.length > 0 && currentUser) {
+      await api.updateTrainerCompetencyProfile(currentUser.id, payload.competencies);
+    }
+    return created;
+  }
+
   async function publishBulletin(bulletin) {
     try {
       const payload = { ...bulletin, published_by: currentUser ? currentUser.id : null };
@@ -1013,7 +1045,7 @@ export function AppProvider({ children }) {
     getExamForCourse, getModulesForCourse, getCompletedCoursesFor,
     getTraineeGaps, getRecommendedCourses,
     approveProfile, enrollPersonnel, adminCreateDirectProfile, submitProfileForApproval, adminApproveTrainee, onChangeUserRole,
-    spawnAiExam, generateExamQuestions, createCourseBundle, createExamForCourse, publishBulletin, onPublishBulletin, submitExam,
+    spawnAiExam, generateExamQuestions, createCourseBundle, createExamForCourse, onDispatchNewExam, publishBulletin, onPublishBulletin, submitExam,
     getOrgAnalytics, getSkillGapDistribution, exportToCSV, resetDemoData,
   };
 

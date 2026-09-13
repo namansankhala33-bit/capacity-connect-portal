@@ -1,14 +1,18 @@
 import { useState, useRef, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
+import { uuidv4 } from '../../utils/uuid';
 
 export default function TrainerDashboard() {
   const {
     courses, profiles, competencies, exams, currentUser,
-    generateExamQuestions, createExamForCourse, trainerLibrary, onUploadResource, onUpdateTrainerProfile,
+    generateExamQuestions, onDispatchNewExam, trainerLibrary, onUploadResource, onUpdateTrainerProfile,
     evaluations, getTraineeGaps, getCompletedCoursesFor,
   } = useApp();
 
   const [aiCourseId, setAiCourseId] = useState('');
+  const [aiTitle, setAiTitle] = useState('');
+  const [aiSubject, setAiSubject] = useState('');
+  const [aiDeadline, setAiDeadline] = useState('');
   const [aiBusy, setAiBusy] = useState(false);
   const [aiError, setAiError] = useState('');
   const [aiResult, setAiResult] = useState(null);
@@ -35,6 +39,7 @@ export default function TrainerDashboard() {
   const trainers = profiles.filter(p => p.role === 'Trainer');
   const totalEnrolled = allCourses.length;
   const examCount = exams.length;
+  const myExamArchive = exams.filter(e => e.trainer_id === currentUser?.id);
 
   const approvedTrainees = profiles.filter(p => p.role === 'Trainee' && p.approved_by_admin);
   const examsByCourse = exams.reduce((acc, ex) => {
@@ -100,18 +105,28 @@ export default function TrainerDashboard() {
     setAiError('');
     setAiBusy(true);
     const course = (myCourses.length ? myCourses : allCourses).find(c => c.id === aiPreview.courseId);
-    const deadline = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const deadline = aiDeadline
+      ? new Date(aiDeadline)
+      : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     try {
-      const existing = exams.find(e => e.course_id === aiPreview.courseId);
-      const exam = await createExamForCourse({
-        course_id: aiPreview.courseId,
+      const created = await onDispatchNewExam({
+        id: uuidv4(),
+        title: aiTitle.trim() || (course ? course.title : 'Scheduled Meteorological Assessment'),
+        subject: aiSubject || 'General Meteorology',
+        deadline: deadline.toISOString(),
         questions: aiPreview.questions,
+        is_active: true,
+        trainer_id: currentUser?.id,
+        submitted_count: 0,
+        course_id: aiPreview.courseId,
         passing_score: 60,
-        submission_deadline: deadline.toISOString(),
         competencies: course?.developed_competencies || [],
       });
-      setAiResult({ exam, course, questions: aiPreview.questions, deadline, updated: Boolean(existing) });
+      setAiResult({ exam: created, course, questions: aiPreview.questions, deadline, updated: Boolean(exams.find(e => e.course_id === aiPreview.courseId)) });
       setAiPreview(null);
+      setAiTitle('');
+      setAiSubject('');
+      setAiDeadline('');
       setDispatchFlash(true);
       setTimeout(() => setDispatchFlash(false), 6000);
     } catch (err) {
@@ -608,13 +623,56 @@ export default function TrainerDashboard() {
               <div style={{ fontWeight: 800, fontSize: '15px', letterSpacing: '0.4px' }}>INTERNAL QUALITY CONTROL: EXAM TELEMETRY VERIFICATION NODE</div>
             </div>
             <div style={{ fontSize: '12px', color: '#9fb6d2', marginBottom: '18px', lineHeight: 1.5 }}>
-              Verify the generated meteorological metrics, answer parameters, and target grading keys before broadcasting this syllabus to the active force registry.
+              Verify the generated meteorological metrics, configure custom assignment parameters, and broadcast this syllabus to the active force registry.
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr)', gap: '14px', marginBottom: '18px' }}>
+              <div className="form-group" style={{ marginBottom: 0, gridColumn: '1 / -1' }}>
+                <label style={{ fontSize: '11px', fontWeight: 700, color: '#9fb6d2', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px', display: 'block' }}>Assignment Custom Title</label>
+                <input
+                  type="text"
+                  value={aiTitle}
+                  onChange={e => setAiTitle(e.target.value)}
+                  placeholder="e.g., Severe Cyclonic Storm Tracking Lab Exam"
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.3)', color: '#fff', fontSize: '13px', boxSizing: 'border-box' }}
+                />
+              </div>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label style={{ fontSize: '11px', fontWeight: 700, color: '#9fb6d2', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px', display: 'block' }}>Core Meteorological Subject / Topic</label>
+                <select
+                  value={aiSubject}
+                  onChange={e => setAiSubject(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.3)', color: '#fff', fontSize: '13px', boxSizing: 'border-box' }}
+                >
+                  <option value="">Select meteorological subject…</option>
+                  <option>Radar Meteorology</option>
+                  <option>NWP &amp; Data Assimilation</option>
+                  <option>Satellite Remote Sensing</option>
+                  <option>Severe Weather &amp; Mesoscale</option>
+                  <option>BNS Warning Compliance</option>
+                  <option>Hydrometeorology &amp; Climate</option>
+                  <option>Aviation Meteorology</option>
+                  <option>General Meteorology</option>
+                </select>
+              </div>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label style={{ fontSize: '11px', fontWeight: 700, color: '#9fb6d2', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px', display: 'block' }}>Submission Deadline</label>
+                <input
+                  type="datetime-local"
+                  value={aiDeadline}
+                  onChange={e => setAiDeadline(e.target.value)}
+                  min={new Date().toISOString().slice(0, 16)}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.3)', color: '#fff', fontSize: '13px', boxSizing: 'border-box' }}
+                />
+              </div>
             </div>
 
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '18px' }}>
-              <span className="badge badge-info">5 multi-selection metrics</span>
+              <span className="badge badge-info">{aiPreview.questions.length} multi-selection metrics</span>
               <span className="badge badge-info">Marks weightage: 20 / question</span>
-              <span className="badge badge-info">Deadline: {(myCourses.length ? myCourses : allCourses).find(c => c.id === aiPreview.courseId)?.title || 'Linked syllabus'}</span>
+              <span className="badge badge-info">{aiTitle.trim() || (myCourses.length ? myCourses : allCourses).find(c => c.id === aiPreview.courseId)?.title || 'Linked syllabus'}</span>
+              {aiSubject && <span className="badge badge-info">{aiSubject}</span>}
+              <span className="badge badge-info">{aiDeadline ? new Date(aiDeadline).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '+7 day window'}</span>
             </div>
 
             {aiPreview.questions.map((q, i) => (
@@ -682,6 +740,31 @@ export default function TrainerDashboard() {
           </div>
         )}
       </div>
+      </div>
+
+      {/* ── SENT ASSESSMENT ARCHIVES LOG ─────────────────────────────────── */}
+      <div className="card" style={{ marginTop: '24px', borderLeft: '6px solid var(--secondary)' }}>
+        <div className="card-header" style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+          <h3>Sent Assessment Archives Log</h3>
+          <span className="badge badge-info">{myExamArchive.length} dispatched syllabus record(s)</span>
+        </div>
+        <div className="card-body" style={{ padding: '12px 24px' }}>
+          {myExamArchive.length > 0 ? myExamArchive.slice().reverse().map(ex => (
+            <div key={ex.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', padding: '14px 0', borderBottom: '1px solid var(--border)' }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: '14px' }}>{ex.title}</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center', fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                  <span className="badge badge-info">{ex.subject || 'General Meteorology'}</span>
+                  <span>🗓 Deadline {new Date(ex.deadline || ex.submission_deadline).toLocaleString('en-IN')}</span>
+                  <span>· {(ex.questions || []).length} MCQ(s)</span>
+                </div>
+              </div>
+              <span className="badge badge-success">ACTIVE</span>
+            </div>
+          )) : (
+            <div className="empty-state"><p>No assessment syllabus records yet. Compile and commission an exam above to log it here.</p></div>
+          )}
+        </div>
       </div>
     </div>
   );

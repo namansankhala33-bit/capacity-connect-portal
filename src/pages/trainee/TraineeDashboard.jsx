@@ -33,11 +33,7 @@ export default function TraineeDashboard() {
   const avgCompetency = myScores.reduce((a, c) => a + c.current_score, 0) / Math.max(1, myScores.length);
 
   const myEvals = evaluations.filter(e => e.trainee_id === profile.id).length;
-  const activeTraineeExams = exams.filter(exam =>
-    exam.is_active !== false &&
-    !exam.submitted &&
-    new Date(exam.submission_deadline) > new Date()
-  );
+  const traineePendingTasks = exams.filter(e => e.is_active === true);
 
   const scoreMap = {};
   scores.filter(s => s.trainee_id === profile.id).forEach(s => { scoreMap[s.competency_id] = s.current_score; });
@@ -151,7 +147,7 @@ export default function TraineeDashboard() {
         </div>
         <div className="stat-card warning">
           <div className="stat-label">Pending Assessments</div>
-          <div className="stat-value">{activeTraineeExams.length}</div>
+          <div className="stat-value">{traineePendingTasks.length}</div>
           <div className="stat-change">Open until deadline</div>
         </div>
       </div>
@@ -217,23 +213,25 @@ export default function TraineeDashboard() {
               <h3>Upcoming Assessments / Pending Evaluations</h3>
             </div>
             <div className="card-body" style={{ padding: '12px 24px' }}>
-              {activeTraineeExams.map(exam => {
-                const course = courses.find(c => c.id === exam.course_id) || { title: exam.course_title || 'Open Assessment Window' };
-                const daysLeft = Math.ceil((new Date(exam.submission_deadline) - new Date()) / 86400000);
+              {traineePendingTasks.map(task => {
+                const itemCourse = courses.find(c => c.id === task.course_id) || { title: task.course_title || 'Open Assessment Window' };
+                const deadline = new Date(task.deadline || task.submission_deadline);
+                const daysLeft = Math.ceil((deadline - new Date()) / 86400000);
                 return (
-                  <div key={exam.id} style={{ padding: '14px 0', borderBottom: '1px solid var(--border)' }}>
+                  <div key={task.id} style={{ padding: '14px 0', borderBottom: '1px solid var(--border)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
                       <div style={{ minWidth: 0 }}>
-                        <div style={{ fontWeight: 600, fontSize: '13px' }}>{course.title}</div>
-                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                          {exam.questions ? `${exam.questions.length} MCQ(s) · 20 marks each` : ''} · Deadline{' '}
-                          {new Date(exam.submission_deadline).toLocaleDateString('en-IN')} · {daysLeft} day(s) remaining
+                        <div style={{ fontWeight: 700, fontSize: '14px' }}>{task.title || itemCourse.title}</div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center', fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                          <span className="badge badge-info">{task.subject || itemCourse.category || 'Meteorology'}</span>
+                          <span>{task.questions ? `${task.questions.length} MCQ(s) · 20 marks each` : ''}</span>
+                          <span>🗓 {deadline.toLocaleString('en-IN')} · {daysLeft} day(s) remaining</span>
                         </div>
                       </div>
                       <button
                         className="btn btn-success"
                         style={{ minHeight: '44px', padding: '10px 18px', fontSize: '13px', fontWeight: 700 }}
-                        onClick={() => setActiveExam(exam)}
+                        onClick={() => setActiveExam(task)}
                       >
                         Attempt Assessment →
                       </button>
@@ -241,7 +239,7 @@ export default function TraineeDashboard() {
                   </div>
                 );
               })}
-              {activeTraineeExams.length === 0 && <div className="empty-state"><p>No open assessment windows.</p></div>}
+              {traineePendingTasks.length === 0 && <div className="empty-state"><p>No open assessment windows.</p></div>}
             </div>
           </div>
         </div>
@@ -309,10 +307,10 @@ export default function TraineeDashboard() {
               <>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px', marginBottom: '16px' }}>
                   <div>
-                    <div style={{ fontSize: '16px', fontWeight: 700 }}>{courses.find(c => c.id === activeExam.course_id)?.title || activeExam.course_title || 'Scheduled Assessment'}</div>
+                    <div style={{ fontSize: '16px', fontWeight: 700 }}>{activeExam.title || courses.find(c => c.id === activeExam.course_id)?.title || activeExam.course_title || 'Scheduled Assessment'}</div>
                     <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
                       {activeExam.questions ? `${activeExam.questions.length} MCQ(s) · 20 marks each · Pass at ${activeExam.passing_score || 60}%` : ''}{' '}
-                      · Deadline {new Date(activeExam.submission_deadline).toLocaleString('en-IN')}
+                      · Deadline {new Date(activeExam.deadline || activeExam.submission_deadline).toLocaleString('en-IN')}
                     </div>
                   </div>
                   <button className="btn btn-outline btn-sm" onClick={resetQuiz}>× Close</button>
