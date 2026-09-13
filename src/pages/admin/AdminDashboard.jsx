@@ -4,6 +4,7 @@ import {
   PieChart, Pie, Cell, LineChart, Line,
 } from 'recharts';
 import { useApp } from '../../context/AppContext';
+import { useIsMobile } from '../../utils/useIsMobile';
 
 const ROLE_COLORS = { Admin: 'var(--danger)', Trainer: 'var(--secondary)', Trainee: 'var(--success)' };
 const STATION_COLORS = ['#0ea5e9', '#16a34a', '#f59e0b', '#8b5cf6', '#ec4899', '#dc2626', '#14b8a6'];
@@ -56,6 +57,8 @@ export default function AdminDashboard() {
     bulletinBoard, certifications,
     exams, evaluations, adminCreateDirectProfile, adminApproveTrainee, onChangeUserRole, onPublishBulletin,
   } = useApp();
+
+  const isMobile = useIsMobile();
 
   const [enroll, setEnroll] = useState({ name: '', email: '', designation: '', station_location: '' });
   const [enrolling, setEnrolling] = useState(false);
@@ -241,7 +244,7 @@ export default function AdminDashboard() {
           <div className="grid grid-3" style={{ marginTop: '22px' }}>
             <div className="chart-card">
               <h4>Courses · Enrolment vs Capacity</h4>
-              <div className="chart-box">
+              <div className="chart-box" style={{ width: '100%', height: isMobile ? 220 : 350, position: 'relative' }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={courseChartData} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
@@ -258,7 +261,7 @@ export default function AdminDashboard() {
 
             <div className="chart-card">
               <h4>Exam Success vs Retake Queues</h4>
-              <div className="chart-box">
+              <div className="chart-box" style={{ width: '100%', height: isMobile ? 220 : 350, position: 'relative' }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
@@ -281,7 +284,7 @@ export default function AdminDashboard() {
 
             <div className="chart-card">
               <h4>Daily Active Sessions · Station Sectors</h4>
-              <div className="chart-box">
+              <div className="chart-box" style={{ width: '100%', height: isMobile ? 220 : 350, position: 'relative' }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={activityData} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />

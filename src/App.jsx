@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, NavLink, useLocation } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
+import { useIsMobile } from './utils/useIsMobile';
 import LoginPage from './pages/LoginPage';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminProfiles from './pages/admin/AdminProfiles';
@@ -34,18 +34,6 @@ const traineeLinks = [
   { to: '/trainee/competencies', label: 'Competency Profile', icon: '🎯' },
   { to: '/trainee/skill-gaps', label: 'Skill Gap Analysis', icon: '🔍' },
 ];
-
-function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
-  useEffect(() => {
-    function onResize() {
-      setIsMobile(window.innerWidth < 768);
-    }
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
-  return isMobile;
-}
 
 function Sidebar() {
   const { currentUser, logout } = useApp();

@@ -3,9 +3,11 @@ import {
   ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line
 } from 'recharts';
 import { useApp } from '../../context/AppContext';
+import { useIsMobile } from '../../utils/useIsMobile';
 
 export default function AdminAnalytics() {
   const { getOrgAnalytics, getSkillGapDistribution, exportToCSV } = useApp();
+  const isMobile = useIsMobile();
 
   const stationData = getOrgAnalytics();
   const impactData = getSkillGapDistribution();
@@ -33,18 +35,20 @@ export default function AdminAnalytics() {
           <div className="card-header">
             <h3>Course Completion by Station</h3>
           </div>
-          <div className="card-body" style={{ height: '320px' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={stationData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={0} angle={-15} textAnchor="end" height={60} />
-                <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="completed" name="Courses Completed" fill="#1e3a5f" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="avg" name="Avg Competency %" fill="#0ea5e9" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+          <div className="card-body">
+            <div className="chart-box" style={{ width: '100%', height: isMobile ? 220 : 350, position: 'relative' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={stationData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={0} angle={-15} textAnchor="end" height={60} />
+                  <YAxis tick={{ fontSize: 12 }} />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="completed" name="Courses Completed" fill="#1e3a5f" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="avg" name="Avg Competency %" fill="#0ea5e9" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </div>
 
@@ -52,16 +56,18 @@ export default function AdminAnalytics() {
           <div className="card-header">
             <h3>Skill-Gap Distribution Across Stations</h3>
           </div>
-          <div className="card-body" style={{ height: '320px' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie data={impactData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={110} label>
-                  {impactData.map(entry => <Cell key={entry.name} fill={entry.color} />)}
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
+          <div className="card-body">
+            <div className="chart-box" style={{ width: '100%', height: isMobile ? 220 : 350, position: 'relative' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={impactData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={isMobile ? 80 : 110} label>
+                    {impactData.map(entry => <Cell key={entry.name} fill={entry.color} />)}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </div>
       </div>
@@ -71,18 +77,20 @@ export default function AdminAnalytics() {
           <div className="card-header">
             <h3>Organisation Improvement Trend</h3>
           </div>
-          <div className="card-body" style={{ height: '300px' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={trendData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} unit="%" />
-                <Tooltip />
-                <Legend />
-                <Line type="monotone" dataKey="competence" name="Competency Score" stroke="#16a34a" strokeWidth={2} dot={{ r: 4 }} />
-                <Line type="monotone" dataKey="courses" name="% Courses Complete" stroke="#0ea5e9" strokeWidth={2} dot={{ r: 4 }} />
-              </LineChart>
-            </ResponsiveContainer>
+          <div className="card-body">
+            <div className="chart-box" style={{ width: '100%', height: isMobile ? 220 : 350, position: 'relative' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={trendData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                  <YAxis tick={{ fontSize: 12 }} unit="%" />
+                  <Tooltip />
+                  <Legend />
+                  <Line type="monotone" dataKey="competence" name="Competency Score" stroke="#16a34a" strokeWidth={2} dot={{ r: 4 }} />
+                  <Line type="monotone" dataKey="courses" name="% Courses Complete" stroke="#0ea5e9" strokeWidth={2} dot={{ r: 4 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </div>
 
