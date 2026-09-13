@@ -112,42 +112,6 @@ export default function LoginPage() {
         }}
       >
         <div
-          className="home-feed"
-          style={{
-            width: isMobile ? '100%' : '50%',
-            minWidth: isMobile ? '100%' : '400px',
-            boxSizing: 'border-box',
-          }}
-        >
-          <div className="home-feed-header">
-            <div className="home-feed-title">
-              <span className="home-feed-live" />
-              <h2>Homepage Bulletin Feed</h2>
-            </div>
-            <span className="badge badge-danger">● LIVE</span>
-          </div>
-          <div className="home-feed-sub">
-            Notifications · Announcements · Achievements · New Content — transmitted by the Administration Control Room.
-          </div>
-          <div className="home-feed-list">
-            {bulletinBoard.length === 0 && (
-              <div className="home-feed-empty">No broadcasts published yet. The Director General will post updates here.</div>
-            )}
-            {bulletinBoard.map(b => (
-              <div key={b.id} className="bul-row">
-                <span className={`bul-tag bul-tag-${bulTagClass(b.type)}`}>{b.type}</span>
-                <div style={{ minWidth: 0 }}>
-                  <div className="bul-title">{b.title}</div>
-                  <div className="bul-meta">{formatDate(b.date_created || b.date)}</div>
-                  <div className="bul-msg">{b.message}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="home-feed-foot">{bulletinBoard.length} transmission(s) on the homepage</div>
-        </div>
-
-        <div
           className="login-card"
           style={{
             width: isMobile ? '100%' : '50%',
@@ -241,6 +205,47 @@ export default function LoginPage() {
               </div>
             )}
           </div>
+        </div>
+
+        <div
+          className="home-feed"
+          style={{
+            width: isMobile ? '100%' : '50%',
+            minWidth: isMobile ? '100%' : '400px',
+            height: isMobile ? 'auto' : '550px',
+            maxHeight: isMobile ? 'none' : '550px',
+            display: 'flex',
+            flexDirection: 'column',
+            boxSizing: 'border-box',
+            overflow: 'hidden',
+          }}
+        >
+          <div className="home-feed-header">
+            <div className="home-feed-title">
+              <span className="home-feed-live" />
+              <h2>Homepage Bulletin Feed</h2>
+            </div>
+            <span className="badge badge-danger">● LIVE</span>
+          </div>
+          <div className="home-feed-sub">
+            Notifications · Announcements · Achievements · New Content — transmitted by the Administration Control Room.
+          </div>
+          <div className="home-feed-list" style={{ flex: 1, overflowY: 'auto', paddingRight: '5px', boxSizing: 'border-box' }}>
+            {bulletinBoard.length === 0 && (
+              <div className="home-feed-empty">No broadcasts published yet. The Director General will post updates here.</div>
+            )}
+            {bulletinBoard.map(b => (
+              <div key={b.id} className="bul-row">
+                <span className={`bul-tag bul-tag-${bulTagClass(b.type)}`}>{b.type}</span>
+                <div style={{ minWidth: 0 }}>
+                  <div className="bul-title">{b.title}</div>
+                  <div className="bul-meta">{formatDate(b.date_created || b.date)}</div>
+                  <div className="bul-msg">{b.message}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="home-feed-foot">{bulletinBoard.length} transmission(s) on the homepage</div>
         </div>
       </div>
     </div>
