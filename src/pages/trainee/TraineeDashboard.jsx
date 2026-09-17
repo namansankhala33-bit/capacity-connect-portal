@@ -1,4 +1,5 @@
 import LearningLoop from '../../components/LearningLoop';
+import GlobalChat from '../../components/GlobalChat';
 import { useApp } from '../../context/AppContext';
 import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { radarDomains, resolveRadarCompetency } from '../../utils/radarDomains';
@@ -105,22 +106,25 @@ export default function TraineeDashboard() {
       <LearningLoop activeIndex={3} />
 
       {highPriority.length > 0 && (
-        <div className="skill-gap-alert high" style={{ marginBottom: '20px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
-            <div>
-              <strong>⚠ Competency Gap Alert:</strong> You have {highPriority.length} meteorological competency gap(s) of 25+ points.
-              Complete the recommended training below to close them — a passing score of <strong>≥80%</strong> awards the IMD Domain
-              Competency Badge, boosts the Radar Matrix by +15 index points and removes the topic from this deficit alert.
-            </div>
+        <div
+          className="skill-gap-alert high"
+          style={{ padding: '10px 16px', borderRadius: 8, marginBottom: 15, background: '#fff5f5', borderLeft: '4px solid #e53e3e', borderRight: 'none', borderTop: 'none', borderBottom: 'none' }}
+        >
+          <div style={{ fontSize: 13, fontWeight: 'bold', color: '#c53030', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <strong>⚠ Competency Gap Alert:</strong>
+            <span>You have {highPriority.length} meteorological competency gap(s) of 25+ points. Complete the recommended training below to close them — a passing score of <strong>≥80%</strong> awards the IMD Domain Competency Badge, boosts the Radar Matrix by +15 index points and removes the topic from this deficit alert.</span>
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '10px' }}>
+          <div style={{ display: 'flex', gap: 8, overflowX: 'auto', padding: '5px 0', marginTop: 5, whiteSpace: 'nowrap' }}>
             {highPriority.map(g => {
               const d = radarDomains.find(x => {
                 const r = resolveRadarCompetency(competencies, x);
                 return r && r.id === g.id;
               });
               return (
-                <span key={g.id} className="badge badge-danger">
+                <span
+                  key={g.id}
+                  style={{ fontSize: 11, padding: '2px 8px', background: 'rgba(197, 48, 48, 0.08)', color: '#c53030', borderRadius: 4, fontWeight: 600, border: '1px solid rgba(197, 48, 48, 0.15)', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center' }}
+                >
                   {d ? d.label : g.competency_name} · {g.current_score}% vs {g.target_score}%
                 </span>
               );
@@ -240,6 +244,33 @@ export default function TraineeDashboard() {
                 );
               })}
               {traineePendingTasks.length === 0 && <div className="empty-state"><p>No open assessment windows.</p></div>}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── GLOBAL OPERATIONAL CHANNEL + PROFILE SNAPSHOT ─────────────────── */}
+      <div className="grid grid-2" style={{ marginTop: '24px' }}>
+        <GlobalChat />
+        <div className="card profile-snapshot">
+          <div className="card-header">
+            <h3>👤 Operational Profile Snapshot</h3>
+          </div>
+          <div className="card-body">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '16px' }}>
+              <div className="avatar avatar-lg">{profile.name.split(' ').map(n => n[0]).join('').substring(0, 2)}</div>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: '16px' }}>{profile.name}</div>
+                <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{profile.designation}</div>
+              </div>
+            </div>
+            <div className="snapshot-fields">
+              <div className="snapshot-field"><span className="snapshot-key">Employee ID</span><span className="snapshot-val">{profile.employee_id || '—'}</span></div>
+              <div className="snapshot-field"><span className="snapshot-key">Station</span><span className="snapshot-val">{profile.station_location || '—'}</span></div>
+              <div className="snapshot-field"><span className="snapshot-key">Role</span><span className="snapshot-val">{profile.role}</span></div>
+              <div className="snapshot-field"><span className="snapshot-key">Overall Competency</span><span className="snapshot-val">{Math.round(avgCompetency)}%</span></div>
+              <div className="snapshot-field"><span className="snapshot-key">Completed Programmes</span><span className="snapshot-val">{completedCourses.length}</span></div>
+              <div className="snapshot-field"><span className="snapshot-key">Pending Assessments</span><span className="snapshot-val">{traineePendingTasks.length}</span></div>
             </div>
           </div>
         </div>

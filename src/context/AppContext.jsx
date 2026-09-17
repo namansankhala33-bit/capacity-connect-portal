@@ -440,6 +440,10 @@ export function AppProvider({ children }) {
   const [trainerLibrary, setTrainerLibrary] = useState(loadTrainerLibrary);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [error, setError] = useState('');
+  const [globalChatMessages, setGlobalChatMessages] = useState([
+    { id: 'MSG-SEED-1', sender_id: 'imd-ops', display_name: 'IMD Operations Wing', content: 'Monsoon withdrawal timelines updated in Pune sector — all regional desks to acknowledge by 16:00 IST.', is_anonymous: false, timestamp: new Date().toLocaleTimeString() },
+    { id: 'MSG-SEED-2', sender_id: 'imd-sat', display_name: 'Satellite Cell', content: 'Satellite interpretation values submitted for review against the INSAT-3DR sounder product suite.', is_anonymous: false, timestamp: new Date().toLocaleTimeString() },
+  ]);
 
   const currentUser = session?.user || null;
 
@@ -518,6 +522,20 @@ export function AppProvider({ children }) {
   function logout() {
     localStorage.removeItem('cc_session');
     setSession(null);
+  }
+
+  function onTransmitPeerMessage(messagePayload) {
+    setGlobalChatMessages(prev => [
+      ...prev,
+      {
+        id: 'MSG-' + Date.now(),
+        sender_id: messagePayload.sender_id,
+        display_name: messagePayload.display_name,
+        content: messagePayload.content,
+        is_anonymous: messagePayload.is_anonymous,
+        timestamp: new Date().toLocaleTimeString(),
+      },
+    ]);
   }
 
   function getProfile(id) {
@@ -1040,6 +1058,7 @@ export function AppProvider({ children }) {
     mode: api.mode(),
     loading, error, isOffline,
     currentUser, profiles, users: profiles, courses, modules, exams, evaluations, competencies, scores, bulletins, bulletinBoard: bulletins, certifications, active_assessments,
+    globalChatMessages, onTransmitPeerMessage,
     trainerLibrary, onUploadResource, onUpdateTrainerProfile,
     login, logout, refresh, getProfile, getTrainee, getTrainerById, register,
     getExamForCourse, getModulesForCourse, getCompletedCoursesFor,

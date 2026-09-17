@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
+import { useIsMobile } from '../../utils/useIsMobile';
 import NewUIBackground from './NewUIBackground';
 
 const ROLE_LINKS = {
@@ -24,6 +25,23 @@ const ROLE_LINKS = {
 };
 
 const ROLE_TITLE = { Admin: 'Administration', Trainer: 'Training Wing', Trainee: 'Meteorologist Workspace' };
+
+function NewUIDock({ links, onLogout }) {
+  return (
+    <nav className="new-ui-dock" aria-label="Primary">
+      {links.map(link => (
+        <NavLink key={link.to} to={link.to} className={({ isActive }) => `new-ui-dock-item${isActive ? ' active' : ''}`}>
+          <span className="new-ui-dock-icon">{link.icon}</span>
+          <span className="new-ui-dock-label">{link.label}</span>
+        </NavLink>
+      ))}
+      <button type="button" className="new-ui-dock-item new-ui-dock-logout" onClick={onLogout} aria-label="Sign out">
+        <span className="new-ui-dock-icon">⎋</span>
+        <span className="new-ui-dock-label">Exit</span>
+      </button>
+    </nav>
+  );
+}
 
 function NewUIAppSidebar() {
   const { currentUser, logout } = useApp();
@@ -74,10 +92,12 @@ function NewUIAppSidebar() {
 }
 
 export default function NewUIAppShell({ title, children }) {
-  const { isOffline, mode, currentUser } = useApp();
+  const { isOffline, mode, currentUser, logout } = useApp();
+  const isMobile = useIsMobile();
   const [sound, setSound] = useState(true);
   const [bright, setBright] = useState(false);
   const initials = (currentUser?.name || 'U').split(' ').map(n => n[0]).join('').substring(0, 2);
+  const links = ROLE_LINKS[currentUser?.role] || [];
 
   return (
     <div className="new-ui-scope">
@@ -88,7 +108,7 @@ export default function NewUIAppShell({ title, children }) {
       </div>
 
       <div className="new-ui-shell">
-        <NewUIAppSidebar />
+        {!isMobile && <NewUIAppSidebar />}
 
         <main className="new-ui-main">
           <div className="new-ui-topbar">
@@ -116,11 +136,13 @@ export default function NewUIAppShell({ title, children }) {
             </div>
           </div>
 
-          <div className="new-ui-content">
+          <div className={`new-ui-content${isMobile ? ' new-ui-mobile-pad' : ''}`}>
             {children}
           </div>
         </main>
       </div>
+
+      {isMobile && <NewUIDock links={links} onLogout={logout} />}
     </div>
   );
 }
