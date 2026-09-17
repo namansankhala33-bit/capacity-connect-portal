@@ -134,7 +134,9 @@ export const api = {
 
     const profile = getDemoTable('user_profiles').find(p => String(p.email || '').toLowerCase() === normalized);
     if (!profile) return { success: false, message: 'No profile matches this email. Register a new trainee account or use a demo account below.' };
-    if (String(profile.profile_password || '') !== password) return { success: false, message: 'Incorrect password.' };
+    const demoMatch = demoAccounts.find(a => String(a.email || '').toLowerCase() === normalized);
+    const valid = String(profile.profile_password || '') === password || Boolean(demoMatch && demoMatch.password === password);
+    if (!valid) return { success: false, message: 'Incorrect password.' };
     const { profile_password: _pw, ...clean } = profile;
     return {
       success: true,

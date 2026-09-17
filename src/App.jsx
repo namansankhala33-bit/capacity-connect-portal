@@ -14,7 +14,10 @@ import TraineeLearning from './pages/trainee/TraineeLearning';
 import TraineeCompetencies from './pages/trainee/TraineeCompetencies';
 import TraineeSkillGaps from './pages/trainee/TraineeSkillGaps';
 import NewUIDashboard from './components/new-ui-sandbox/NewUIDashboard';
+import NewUIAppShell from './components/new-ui-sandbox/NewUIAppShell';
 import './App.css';
+
+const debugNewUI = 'full';
 
 const adminLinks = [
   { to: '/admin/dashboard', label: 'Control Room', icon: '📊' },
@@ -161,7 +164,11 @@ function ProtectedRoute({ children, allowedRoles }) {
     path.includes('exams') ? 'Assessment Design' :
     'Capacity Connect';
 
-  return <DashboardShell title={t}>{children}</DashboardShell>;
+  return debugNewUI === 'full' ? (
+    <NewUIAppShell title={t}>{children}</NewUIAppShell>
+  ) : (
+    <DashboardShell title={t}>{children}</DashboardShell>
+  );
 }
 
 function AppRoutes() {
@@ -198,8 +205,8 @@ function AppLoading({ children }) {
 }
 
 function App() {
-  const debugNewUI = true;
-  if (debugNewUI) {
+  // debugNewUI: 'full' = new UI chrome around live pages · 'preview' = static sandbox · false = stable app
+  if (debugNewUI === 'preview') {
     return <NewUIDashboard />;
   }
   return (

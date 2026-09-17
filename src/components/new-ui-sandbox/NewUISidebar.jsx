@@ -1,5 +1,3 @@
-import hachiware from '../../assets/new-ui/hachiware_teacher_guide_1789296571776.jpg';
-
 const NAV_ITEMS = [
   { id: 'home', label: 'Home', icon: '🏠' },
   { id: 'skill-tree', label: 'Skill Tree', icon: '⚡' },
@@ -44,19 +42,7 @@ export default function NewUISidebar({ activeNav, onSelectNav }) {
         ))}
       </nav>
 
-      <div className="new-ui-guide">
-        <div className="new-ui-bubble">
-          <p>
-            <strong>Yah! I'm Hachiware Sensei!</strong><br />
-            Let's do our best studying radar and ocean capacity!
-          </p>
-          <p style={{ marginTop: 6, fontSize: 11, fontWeight: 500 }}>This is a sandboxed visual shell — data hooks are empty placeholders.</p>
-        </div>
-        <div className="new-ui-guide-img">
-          <img src={hachiware} alt="Hachiware teacher guide" />
-        </div>
-        <div className="new-ui-sandbox-tag">New-UI Preview Shell</div>
-      </div>
+      <div className="new-ui-sandbox-tag" style={{ marginTop: 8 }}>New-UI Preview Shell</div>
     </aside>
   );
 }
