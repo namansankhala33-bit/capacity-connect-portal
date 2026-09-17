@@ -861,3 +861,41 @@ begin
   return to_jsonb(v_row);
 end;
 $$;
+-- ============ GLOBAL PEER-TO-PEER OPERATIONAL CHANNEL ============
+create table if not exists public.global_chat_messages (
+  id uuid primary key default gen_random_uuid(),
+  sender_id text not null,
+  display_name text not null,
+  content text not null,
+  is_anonymous boolean not null default false,
+  timestamp text not null,
+  created_at timestamptz not null default now()
+);
+
+alter table public.global_chat_messages enable row level security;
+
+drop policy if exists "global_chat_read_all" on public.global_chat_messages;
+create policy "global_chat_read_all"
+  on public.global_chat_messages
+  for select
+  using (true);
+
+drop policy if exists "global_chat_insert_all" on public.global_chat_messages;
+create policy "global_chat_insert_all"
+  on public.global_chat_messages
+  for insert
+  with check (true);
+
+do $$
+begin
+  if not exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
+    create publication supabase_realtime;
+  end if;
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'global_chat_messages'
+  ) then
+    alter publication supabase_realtime add table public.global_chat_messages;
+  end if;
+end
+$$;

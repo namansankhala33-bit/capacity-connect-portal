@@ -440,10 +440,7 @@ export function AppProvider({ children }) {
   const [trainerLibrary, setTrainerLibrary] = useState(loadTrainerLibrary);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [error, setError] = useState('');
-  const [globalChatMessages, setGlobalChatMessages] = useState([
-    { id: 'MSG-SEED-1', sender_id: 'imd-ops', display_name: 'IMD Operations Wing', content: 'Monsoon withdrawal timelines updated in Pune sector — all regional desks to acknowledge by 16:00 IST.', is_anonymous: false, timestamp: new Date().toLocaleTimeString() },
-    { id: 'MSG-SEED-2', sender_id: 'imd-sat', display_name: 'Satellite Cell', content: 'Satellite interpretation values submitted for review against the INSAT-3DR sounder product suite.', is_anonymous: false, timestamp: new Date().toLocaleTimeString() },
-  ]);
+  const [globalChatMessages, setGlobalChatMessages] = useState([]);
 
   const currentUser = session?.user || null;
 
@@ -454,7 +451,7 @@ export function AppProvider({ children }) {
   const refresh = useCallback(async () => {
     try {
       setError('');
-      const [p, c, m, e, ev, comp, sc, b] = await Promise.all([
+      const [p, c, m, e, ev, comp, sc, b, chat] = await Promise.all([
         api.fetchAll('user_profiles'),
         api.fetchCoursesDeep(),
         api.fetchAll('modules'),
@@ -463,6 +460,7 @@ export function AppProvider({ children }) {
         api.fetchAll('meteorological_competencies'),
         api.fetchAll('trainee_competency_scores'),
         api.fetchAll('homepage_bulletins'),
+        api.fetchGlobalChat(),
       ]);
       setProfiles(p);
       setCourses(c);
@@ -472,6 +470,7 @@ export function AppProvider({ children }) {
       setCompetencies(comp);
       setScores(sc);
       setBulletins(b);
+      setGlobalChatMessages(chat);
       setSession(prev => {
         if (!prev || !prev.user) return prev;
         const latest = p.find(x => x.id === prev.user.id);
@@ -524,18 +523,23 @@ export function AppProvider({ children }) {
     setSession(null);
   }
 
-  function onTransmitPeerMessage(messagePayload) {
-    setGlobalChatMessages(prev => [
-      ...prev,
-      {
-        id: 'MSG-' + Date.now(),
-        sender_id: messagePayload.sender_id,
-        display_name: messagePayload.display_name,
-        content: messagePayload.content,
-        is_anonymous: messagePayload.is_anonymous,
-        timestamp: new Date().toLocaleTimeString(),
-      },
-    ]);
+  async function onTransmitPeerMessage(messagePayload) {
+    const payload = {
+      id: 'MSG-' + uuidv4(),
+      sender_id: messagePayload.sender_id,
+      display_name: messagePayload.display_name,
+      content: messagePayload.content,
+      is_anonymous: messagePayload.is_anonymous,
+      timestamp: new Date().toLocaleTimeString(),
+    };
+    let saved = payload;
+    try {
+      saved = await api.transmitGlobalChat(payload);
+    } catch (err) {
+      console.warn('chat-mesh transmit failed:', err);
+    }
+    setGlobalChatMessages(prev => (prev.some(m => m.id === saved.id) ? prev : [...prev, saved]));
+    return saved;
   }
 
   function getProfile(id) {
@@ -1058,7 +1062,7 @@ export function AppProvider({ children }) {
     mode: api.mode(),
     loading, error, isOffline,
     currentUser, profiles, users: profiles, courses, modules, exams, evaluations, competencies, scores, bulletins, bulletinBoard: bulletins, certifications, active_assessments,
-    globalChatMessages, onTransmitPeerMessage,
+    globalChatMessages, setGlobalChatMessages, onTransmitPeerMessage,
     trainerLibrary, onUploadResource, onUpdateTrainerProfile,
     login, logout, refresh, getProfile, getTrainee, getTrainerById, register,
     getExamForCourse, getModulesForCourse, getCompletedCoursesFor,

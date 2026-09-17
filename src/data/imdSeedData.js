@@ -430,3 +430,8 @@ export const demoAccounts = [
   { email: 's.rao@imd.gov.in', password: 'demo123', role: 'Trainer', name: 'Dr. Someshwar Rao', profileId: 'prof-kavi01' },
   { email: 'rajeshwari.menon@imd.gov.in', password: 'demo123', role: 'Trainee', name: 'Dr. Rajeshwari Menon', profileId: 'prof-rahu01' },
 ];
+
+export const globalChatMessages = [
+  { id: 'MSG-SEED-1', sender_id: 'imd-ops', display_name: 'IMD Operations Wing', content: 'Monsoon withdrawal timelines updated in Pune sector — all regional desks to acknowledge by 16:00 IST.', is_anonymous: false, timestamp: '08:14:00' },
+  { id: 'MSG-SEED-2', sender_id: 'imd-sat', display_name: 'Satellite Cell', content: 'Satellite interpretation values submitted for review against the INSAT-3DR sounder product suite.', is_anonymous: false, timestamp: '09:02:00' },
+];

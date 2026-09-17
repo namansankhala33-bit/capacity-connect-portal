@@ -10,6 +10,7 @@ import {
   trainee_competency_scores as seedScores,
   homepage_bulletins as seedBulletins,
   demoAccounts,
+  globalChatMessages as seedChat,
 } from '../data/imdSeedData';
 
 const DB_VERSION = 'imd-cc-v3';
@@ -28,6 +29,7 @@ function demoLoadAll() {
     meteorological_competencies: seedCompetencies,
     trainee_competency_scores: seedScores,
     homepage_bulletins: seedBulletins,
+    global_chat_messages: seedChat,
   };
   localStorage.setItem(DB_VERSION, JSON.stringify(db));
   return db;
@@ -75,6 +77,40 @@ const tables = {
 
 export const api = {
   mode: () => (isSupabaseConfigured ? 'live' : 'demo'),
+
+  async fetchGlobalChat() {
+    if (isSupabaseConfigured) {
+      const { data, error } = await supabase
+        .from('global_chat_messages')
+        .select('id, sender_id, display_name, content, is_anonymous, timestamp')
+        .order('created_at', { ascending: true })
+        .limit(200);
+      if (error) throw error;
+      return data || [];
+    }
+    return getDemoTable('global_chat_messages');
+  },
+
+  async transmitGlobalChat(payload) {
+    if (isSupabaseConfigured) {
+      const { data, error } = await supabase
+        .from('global_chat_messages')
+        .insert({
+          sender_id: payload.sender_id,
+          display_name: payload.display_name,
+          content: payload.content,
+          is_anonymous: payload.is_anonymous,
+          timestamp: payload.timestamp,
+        })
+        .select('id, sender_id, display_name, content, is_anonymous, timestamp')
+        .single();
+      if (error) throw error;
+      return data;
+    }
+    const rows = getDemoTable('global_chat_messages');
+    setDemoTable('global_chat_messages', [...rows, payload]);
+    return payload;
+  },
 
   async fetchAll(table) {
     if (isSupabaseConfigured) {

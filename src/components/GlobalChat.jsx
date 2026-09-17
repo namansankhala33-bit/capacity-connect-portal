@@ -1,13 +1,34 @@
 import { useEffect, useRef, useState } from 'react';
 import { useApp } from '../context/AppContext';
+import { supabase, isSupabaseConfigured } from '../utils/supabaseClient';
 
 export default function GlobalChat() {
-  const { currentUser, globalChatMessages, onTransmitPeerMessage } = useApp();
+  const { currentUser, globalChatMessages, setGlobalChatMessages, onTransmitPeerMessage } = useApp();
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [draft, setDraft] = useState('');
   const viewportRef = useRef(null);
 
   const ownId = currentUser?.id;
+
+  useEffect(() => {
+    if (!isSupabaseConfigured || !supabase) return undefined;
+    const channel = supabase
+      .channel('imd-global-chat-realtime')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'global_chat_messages' },
+        payload => {
+          const row = payload.new;
+          setGlobalChatMessages(prev =>
+            prev.some(m => m.id === row.id) ? prev : [...prev, row],
+          );
+        },
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [setGlobalChatMessages]);
 
   useEffect(() => {
     const node = viewportRef.current;
