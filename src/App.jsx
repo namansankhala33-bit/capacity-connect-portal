@@ -13,6 +13,7 @@ import TraineeDashboard from './pages/trainee/TraineeDashboard';
 import TraineeLearning from './pages/trainee/TraineeLearning';
 import TraineeCompetencies from './pages/trainee/TraineeCompetencies';
 import TraineeSkillGaps from './pages/trainee/TraineeSkillGaps';
+import NewUIDashboard from './components/new-ui-sandbox/NewUIDashboard';
 import './App.css';
 
 const adminLinks = [
@@ -197,6 +198,10 @@ function AppLoading({ children }) {
 }
 
 function App() {
+  const debugNewUI = true;
+  if (debugNewUI) {
+    return <NewUIDashboard />;
+  }
   return (
     <BrowserRouter>
       <AppProvider>
