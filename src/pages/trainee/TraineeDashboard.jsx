@@ -1,5 +1,6 @@
 import LearningLoop from '../../components/LearningLoop';
 import GlobalChat from '../../components/GlobalChat';
+import FeedbackChat from '../../components/FeedbackChat';
 import { useApp } from '../../context/AppContext';
 import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { radarDomains, resolveRadarCompetency } from '../../utils/radarDomains';
@@ -274,6 +275,11 @@ export default function TraineeDashboard() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* ── TRAINEE–TRAINER FEEDBACK SUPPORT ───────────────────────────────── */}
+      <div style={{ marginTop: '24px' }}>
+        <FeedbackChat />
       </div>
 
       {/* ── KNOWLEDGE HUB ──────────────────────────────────────────────────── */}

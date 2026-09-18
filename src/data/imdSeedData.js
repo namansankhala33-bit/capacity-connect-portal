@@ -435,3 +435,20 @@ export const globalChatMessages = [
   { id: 'MSG-SEED-1', sender_id: 'imd-ops', display_name: 'IMD Operations Wing', content: 'Monsoon withdrawal timelines updated in Pune sector — all regional desks to acknowledge by 16:00 IST.', is_anonymous: false, timestamp: '08:14:00' },
   { id: 'MSG-SEED-2', sender_id: 'imd-sat', display_name: 'Satellite Cell', content: 'Satellite interpretation values submitted for review against the INSAT-3DR sounder product suite.', is_anonymous: false, timestamp: '09:02:00' },
 ];
+
+export const trainerAssignmentMap = {
+  'prof-rahu01': ['prof-kavi01'],
+  'prof-arju01': ['prof-kavi01'],
+  'prof-prab01': ['prof-vika01'],
+  'prof-lak01': ['prof-anit01'],
+};
+
+export const feedbackMessages = [
+  { id: 'FB-SEED-1', sender_id: 'prof-rahu01', sender_name: 'Dr. Rajeshwari Menon', receiver_id: 'prof-kavi01', content: 'Good morning sir — I\'ve completed the NWP module lectures and could not fully follow the ensemble spread section. Could you suggest reading material?', timestamp: '10:12:00' },
+  { id: 'FB-SEED-2', sender_id: 'prof-kavi01', sender_name: 'Dr. Someshwar Rao', receiver_id: 'prof-rahu01', content: 'Good morning Rajeshwari. Review Table 4.4 of the IMD NWP operational manual and then attempt the paired sounding exercise again.', timestamp: '10:41:00' },
+  { id: 'FB-SEED-3', sender_id: 'prof-rahu01', sender_name: 'Dr. Rajeshwari Menon', receiver_id: 'prof-kavi01', content: 'Understood. I also wanted to ask whether the re-baselined competency score will reflect in my next matrix review.', timestamp: '10:43:00' },
+  { id: 'FB-SEED-4', sender_id: 'prof-kavi01', sender_name: 'Dr. Someshwar Rao', receiver_id: 'prof-rahu01', content: 'Yes — once your assessment window is marked complete, the radar matrix re-baselines automatically. I will keep an eye on your submission.', timestamp: '10:58:00' },
+  { id: 'FB-SEED-5', sender_id: 'prof-arju01', sender_name: 'Arjun Bhattacharya', receiver_id: 'prof-kavi01', content: 'Sir, can the storm-surge practical batch be extended to the weekend? My station has night duty through Friday.', timestamp: '09:30:00' },
+  { id: 'FB-SEED-6', sender_id: 'prof-vika01', sender_name: 'Vikram Reddy', receiver_id: 'prof-prab01', content: 'Prabha, your agro-meteorology submission looks strong. Fix the IMD-5 station metadata column and resubmit by tomorrow.', timestamp: '11:05:00' },
+  { id: 'FB-SEED-7', sender_id: 'prof-anit01', sender_name: 'Anita Joshi', receiver_id: 'prof-lak01', content: 'Lakshmi, the DWR calibration log you compiled is approved. Please review the monsoon withdrawal handout before Thursday.', timestamp: '12:22:00' },
+];

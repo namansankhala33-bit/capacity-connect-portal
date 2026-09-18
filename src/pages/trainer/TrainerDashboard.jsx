@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
+import FeedbackChat from '../../components/FeedbackChat';
 import { uuidv4 } from '../../utils/uuid';
 
 export default function TrainerDashboard() {
@@ -485,6 +486,11 @@ export default function TrainerDashboard() {
             critical gaps = competency deficits of 25+ index points (HIGH PRIORITY).
           </div>
         </div>
+      </div>
+
+      {/* ── TRAINEE–TRAINER FEEDBACK SUPPORT ──────────────────────────────── */}
+      <div style={{ marginBottom: '24px' }}>
+        <FeedbackChat />
       </div>
 
       <div className="grid grid-2">

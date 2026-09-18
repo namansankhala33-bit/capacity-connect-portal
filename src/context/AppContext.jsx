@@ -441,6 +441,9 @@ export function AppProvider({ children }) {
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [error, setError] = useState('');
   const [globalChatMessages, setGlobalChatMessages] = useState([]);
+  const [moduleProgress, setModuleProgress] = useState([]);
+  const [courseChatLog, setCourseChatLog] = useState([]);
+  const [feedbackMessages, setFeedbackMessages] = useState([]);
 
   const currentUser = session?.user || null;
 
@@ -451,7 +454,7 @@ export function AppProvider({ children }) {
   const refresh = useCallback(async () => {
     try {
       setError('');
-      const [p, c, m, e, ev, comp, sc, b, chat] = await Promise.all([
+      const settled = await Promise.allSettled([
         api.fetchAll('user_profiles'),
         api.fetchCoursesDeep(),
         api.fetchAll('modules'),
@@ -461,7 +464,15 @@ export function AppProvider({ children }) {
         api.fetchAll('trainee_competency_scores'),
         api.fetchAll('homepage_bulletins'),
         api.fetchGlobalChat(),
+        api.fetchFeedback(),
       ]);
+      const values = settled.map(r => (r.status === 'fulfilled' ? r.value : []));
+      const failed = settled.filter(r => r.status === 'rejected');
+      failed.forEach(r => console.warn('sync: dataset refresh failed —', r.reason?.message || r.reason));
+      const [p, c, m, e, ev, comp, sc, b, chat, fb] = values;
+      if (failed.some(r => !/does not exist|42p01|pgrst205/i.test(r.reason?.message || ''))) {
+        setError(failed[0].reason?.message || 'Some data failed to sync.');
+      }
       setProfiles(p);
       setCourses(c);
       setModules(m);
@@ -471,6 +482,7 @@ export function AppProvider({ children }) {
       setScores(sc);
       setBulletins(b);
       setGlobalChatMessages(chat);
+      setFeedbackMessages(fb);
       setSession(prev => {
         if (!prev || !prev.user) return prev;
         const latest = p.find(x => x.id === prev.user.id);
@@ -539,6 +551,38 @@ export function AppProvider({ children }) {
       console.warn('chat-mesh transmit failed:', err);
     }
     setGlobalChatMessages(prev => (prev.some(m => m.id === saved.id) ? prev : [...prev, saved]));
+    return saved;
+  }
+
+  function onPostLectureComment(commentPayload) {
+    const comment = {
+      id: 'COMM-' + Date.now(),
+      course_id: commentPayload.course_id,
+      sender_name: commentPayload.sender_name,
+      content: commentPayload.content,
+      is_anon: commentPayload.is_anon,
+      timestamp: new Date().toLocaleTimeString(),
+    };
+    setCourseChatLog(prev => [...prev, comment]);
+    return comment;
+  }
+
+  async function onSendFeedbackMessage(messagePayload) {
+    const message = {
+      id: 'FB-' + uuidv4(),
+      sender_id: messagePayload.sender_id,
+      sender_name: messagePayload.sender_name,
+      receiver_id: messagePayload.receiver_id,
+      content: messagePayload.content,
+      timestamp: new Date().toLocaleTimeString(),
+    };
+    let saved = message;
+    try {
+      saved = await api.transmitFeedbackMessage(message);
+    } catch (err) {
+      console.warn('feedback-channel transmit failed:', err);
+    }
+    setFeedbackMessages(prev => (prev.some(m => m.id === saved.id) ? prev : [...prev, saved]));
     return saved;
   }
 
@@ -1063,6 +1107,8 @@ export function AppProvider({ children }) {
     loading, error, isOffline,
     currentUser, profiles, users: profiles, courses, modules, exams, evaluations, competencies, scores, bulletins, bulletinBoard: bulletins, certifications, active_assessments,
     globalChatMessages, setGlobalChatMessages, onTransmitPeerMessage,
+    moduleProgress, setModuleProgress, courseChatLog, setCourseChatLog, onPostLectureComment,
+    feedbackMessages, setFeedbackMessages, onSendFeedbackMessage,
     trainerLibrary, onUploadResource, onUpdateTrainerProfile,
     login, logout, refresh, getProfile, getTrainee, getTrainerById, register,
     getExamForCourse, getModulesForCourse, getCompletedCoursesFor,

@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { radarDomainForCompetency } from '../../utils/radarDomains';
+import oceanHero from '../../assets/new-ui/ocean_hero_banner_1789233583380.jpg';
 
 export default function TraineeLearning() {
   const { currentUser, courses, exams, getExamForCourse, getModulesForCourse, getRecommendedCourses, getCompletedCoursesFor } = useApp();
@@ -38,7 +39,7 @@ export default function TraineeLearning() {
   return (
     <div>
       {activeCourse ? (
-        <QuizView course={activeCourse} onExit={() => { setActiveCourse(null); setSearchParams({}); }} />
+        <CoursewarePlayerTerminal course={activeCourse} onExit={() => { setActiveCourse(null); setSearchParams({}); }} />
       ) : (
         <>
           {recommended.length > 0 && (
@@ -85,6 +86,203 @@ export default function TraineeLearning() {
             {display.length === 0 && <div className="card"><div className="card-body"><div className="empty-state"><p>No programmes available.</p></div></div></div>}
           </div>
         </>
+      )}
+    </div>
+  );
+}
+
+function CoursewarePlayerTerminal({ course, onExit }) {
+  const {
+    currentUser, getModulesForCourse, getExamForCourse, submitExam,
+    competencies, moduleProgress, setModuleProgress,
+    courseChatLog, setCourseChatLog, onPostLectureComment,
+  } = useApp();
+
+  const [isMasked, setIsMasked] = useState(false);
+  const [draft, setDraft] = useState('');
+  const [showQuiz, setShowQuiz] = useState(false);
+  const feedRef = useRef(null);
+
+  const courseModules = getModulesForCourse(course.id);
+  const exam = getExamForCourse(course.id);
+
+  const courseComments = courseChatLog.filter(c => c.course_id === course.id);
+  const completedMap = new Set(
+    moduleProgress
+      .filter(p => p.trainee_id === currentUser.id && p.course_id === course.id)
+      .map(p => p.module_id),
+  );
+
+  const totalModules = courseModules.length;
+  const doneModules = courseModules.filter(m => completedMap.has(m.id)).length;
+  const lectureDone = completedMap.has('technical-lecture');
+  const hasModules = totalModules > 0;
+  const progressPct = hasModules
+    ? Math.round((doneModules / totalModules) * 100)
+    : lectureDone ? 100 : 0;
+  const isVerified = progressPct === 100;
+
+  useEffect(() => {
+    const node = feedRef.current;
+    if (node) node.scrollTop = node.scrollHeight;
+  }, [courseComments.length]);
+
+  function toggleModuleComplete() {
+    if (isVerified) {
+      setModuleProgress(prev => prev.filter(p => !(p.trainee_id === currentUser.id && p.course_id === course.id)));
+      return;
+    }
+    const traineeId = currentUser.id;
+    const now = Date.now();
+    const stamp = new Date().toISOString();
+    const entries = hasModules
+      ? courseModules.map((m, i) => ({ id: `PROG-${now}-${i}`, trainee_id: traineeId, course_id: course.id, module_id: m.id, completed_at: stamp }))
+      : [{ id: `PROG-${now}`, trainee_id: traineeId, course_id: course.id, module_id: 'technical-lecture', completed_at: stamp }];
+    setModuleProgress(prev => {
+      const kept = prev.filter(p => !(p.trainee_id === traineeId && p.course_id === course.id));
+      return [...kept, ...entries];
+    });
+  }
+
+  function transmitQuery(e) {
+    e.preventDefault();
+    const content = draft.trim();
+    if (!content) return;
+    onPostLectureComment({
+      course_id: course.id,
+      sender_name: currentUser?.name || 'IMD Trainee',
+      content,
+      is_anon: isMasked,
+    });
+    setDraft('');
+  }
+
+  return (
+    <div className="player-terminal">
+      <div className="player-terminal-header">
+        <div className="player-terminal-hero">
+          <div className="player-terminal-title">{course.title}</div>
+          <div className="player-terminal-meta">
+            {course.category} · {course.duration} · 👨‍🏫 {course.trainer?.name || 'IMD Training Wing'}
+            {exam && <span className="badge badge-info" style={{ marginLeft: '10px' }}>Assessment: {exam.passing_score}% to pass</span>}
+          </div>
+        </div>
+        <div className="player-terminal-actions">
+          {exam && !showQuiz && (
+            <button className="btn btn-outline btn-sm" onClick={() => setShowQuiz(true)}>Launch Assessment →</button>
+          )}
+          <button className="btn btn-danger btn-sm" onClick={onExit}>× Exit</button>
+        </div>
+      </div>
+
+      {showQuiz && exam ? (
+        <QuizView course={course} onExit={() => { setShowQuiz(false); }} />
+      ) : (
+        <div className="player-grid">
+          <div className="player-left">
+            <div className="player-media-console">
+              <div className="player-media-bar">
+                <span>🛰 Active Media Display Console</span>
+                <span className="player-live-dot" />
+              </div>
+              <div className="player-media-pane">
+                <video className="player-video" controls preload="metadata" poster={oceanHero}>
+                  <source src="" type="video/mp4" />
+                  Lecture stream will begin shortly…
+                </video>
+              </div>
+              <div className="player-media-foot">
+                <span>Technical lecture stream · scheduled module presentation</span>
+                <span>{hasModules ? `${doneModules}/${totalModules} modules reviewed` : (lectureDone ? '1/1 lecture reviewed' : '0/1 lecture reviewed')}</span>
+              </div>
+            </div>
+
+            <div className="player-checklist card">
+              <div className="player-checklist-head">
+                <span style={{ fontWeight: 700, fontSize: '14px' }}>Courseware Progress Checklist</span>
+                <span className="badge badge-neutral">{progressPct}% complete</span>
+              </div>
+              <div className="progress-bar-container" style={{ marginBottom: '14px' }}>
+                <div className="progress-bar blue" style={{ width: `${progressPct}%` }} />
+              </div>
+              <div className="player-module-list">
+                {hasModules ? (
+                  courseModules.map((m, i) => {
+                    const isDone = completedMap.has(m.id);
+                    return (
+                      <div key={m.id} className={`player-module-row ${isDone ? 'done' : ''}`}>
+                        <span className="player-module-check">{isDone ? '✓' : '○'}</span>
+                        <span className="player-module-name">{i + 1}. {m.title}</span>
+                        <span className={`badge ${isDone ? 'badge-success' : 'badge-neutral'}`}>{isDone ? 'Verified' : 'Pending'}</span>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="player-module-row">
+                    <span className="player-module-check">{lectureDone ? '✓' : '○'}</span>
+                    <span className="player-module-name">Technical Lecture</span>
+                    <span className={`badge ${lectureDone ? 'badge-success' : 'badge-neutral'}`}>{lectureDone ? 'Verified' : 'Pending'}</span>
+                  </div>
+                )}
+              </div>
+              <div className="player-checklist-actions">
+                <button className="btn btn-primary" onClick={toggleModuleComplete}>
+                  {isVerified ? '✓ Syllabus Module Verified' : '✓ Mark Technical Lecture as Completed'}
+                </button>
+                <span className={`player-state-badge ${isVerified ? 'verified' : 'inprogress'}`}>
+                  {isVerified ? '🟢 Syllabus Module Verified' : '🟠 In Progress'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="player-right">
+            <div className="player-feed card">
+              <div className="player-feed-head">💬 Courseware Telemetry Interaction Node</div>
+              <div className="player-feed-toolbar">
+                <label className="anonymous-switch">
+                  <input type="checkbox" checked={isMasked} onChange={e => setIsMasked(e.target.checked)} />
+                  <span className="anonymous-track"><span className="anonymous-knob" /></span>
+                  <span className="anonymous-label">Mask Handle</span>
+                </label>
+                <span className={isMasked ? 'anonymous-state on' : 'anonymous-state'}>
+                  {isMasked ? 'Anonymous Officer' : 'Identity Visible'}
+                </span>
+              </div>
+              <div className="player-chat-viewport" ref={feedRef} style={{ height: '380px', overflowY: 'auto', background: '#f8fafc', padding: '15px', borderRadius: '8px' }}>
+                {courseComments.length === 0 && (
+                  <div className="empty-state" style={{ padding: '30px 0' }}>
+                    <p>No contextual queries yet — open the lecture discussion for this module.</p>
+                  </div>
+                )}
+                {courseComments.map(msg => {
+                  const identity = msg.is_anon
+                    ? 'Anonymous Officer'
+                    : msg.sender_name || 'IMD Trainee';
+                  return (
+                    <div key={msg.id} className={`player-comment ${msg.is_anon ? 'anon' : ''}`}>
+                      <div className="player-comment-sender">
+                        <span>{identity}</span>
+                        <span className="player-comment-time">{msg.timestamp}</span>
+                      </div>
+                      <div className="player-comment-text">{msg.content}</div>
+                    </div>
+                  );
+                })}
+              </div>
+              <form className="player-feed-form" onSubmit={transmitQuery}>
+                <input
+                  type="text"
+                  value={draft}
+                  onChange={e => setDraft(e.target.value)}
+                  placeholder={isMasked ? 'Transmit query as Anonymous Officer…' : `Transmit as ${currentUser?.name || 'you'}…`}
+                  maxLength={500}
+                />
+                <button type="submit" disabled={!draft.trim()}>Transmit Query</button>
+              </form>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -265,7 +463,7 @@ function QuizView({ course, onExit }) {
             )}
 
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
-              <button className="btn btn-primary" onClick={onExit}>Back to Programmes →</button>
+              <button className="btn btn-primary" onClick={onExit}>Back to Programme →</button>
             </div>
           </div>
         </div>

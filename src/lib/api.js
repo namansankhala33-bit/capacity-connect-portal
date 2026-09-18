@@ -11,6 +11,8 @@ import {
   homepage_bulletins as seedBulletins,
   demoAccounts,
   globalChatMessages as seedChat,
+  trainerAssignmentMap,
+  feedbackMessages as seedFeedback,
 } from '../data/imdSeedData';
 
 const DB_VERSION = 'imd-cc-v3';
@@ -30,6 +32,8 @@ function demoLoadAll() {
     trainee_competency_scores: seedScores,
     homepage_bulletins: seedBulletins,
     global_chat_messages: seedChat,
+    trainer_assignment_map: trainerAssignmentMap,
+    feedback_messages: seedFeedback,
   };
   localStorage.setItem(DB_VERSION, JSON.stringify(db));
   return db;
@@ -37,6 +41,11 @@ function demoLoadAll() {
 
 function demoPersist(db) {
   localStorage.setItem(DB_VERSION, JSON.stringify(db));
+}
+
+function isMissingTable(err) {
+  const msg = (err && (err.message || err.code) || '').toString().toLowerCase();
+  return msg.includes('does not exist') || msg.includes('42p01') || msg.includes('pgrst205');
 }
 
 function getDemoTable(table) {
@@ -80,13 +89,18 @@ export const api = {
 
   async fetchGlobalChat() {
     if (isSupabaseConfigured) {
-      const { data, error } = await supabase
-        .from('global_chat_messages')
-        .select('id, sender_id, display_name, content, is_anonymous, timestamp')
-        .order('created_at', { ascending: true })
-        .limit(200);
-      if (error) throw error;
-      return data || [];
+      try {
+        const { data, error } = await supabase
+          .from('global_chat_messages')
+          .select('id, sender_id, display_name, content, is_anonymous, timestamp')
+          .order('created_at', { ascending: true })
+          .limit(200);
+        if (error) throw error;
+        return data || [];
+      } catch (err) {
+        if (isMissingTable(err)) return [];
+        throw err;
+      }
     }
     return getDemoTable('global_chat_messages');
   },
@@ -109,6 +123,45 @@ export const api = {
     }
     const rows = getDemoTable('global_chat_messages');
     setDemoTable('global_chat_messages', [...rows, payload]);
+    return payload;
+  },
+
+  async fetchFeedback() {
+    if (isSupabaseConfigured) {
+      try {
+        const { data, error } = await supabase
+          .from('feedback_messages')
+          .select('id, sender_id, sender_name, receiver_id, content, timestamp')
+          .order('created_at', { ascending: true })
+          .limit(500);
+        if (error) throw error;
+        return data || [];
+      } catch (err) {
+        if (isMissingTable(err)) return [];
+        throw err;
+      }
+    }
+    return getDemoTable('feedback_messages');
+  },
+
+  async transmitFeedbackMessage(payload) {
+    if (isSupabaseConfigured) {
+      const { data, error } = await supabase
+        .from('feedback_messages')
+        .insert({
+          sender_id: payload.sender_id,
+          sender_name: payload.sender_name,
+          receiver_id: payload.receiver_id,
+          content: payload.content,
+          timestamp: payload.timestamp,
+        })
+        .select('id, sender_id, sender_name, receiver_id, content, timestamp')
+        .single();
+      if (error) throw error;
+      return data;
+    }
+    const rows = getDemoTable('feedback_messages');
+    setDemoTable('feedback_messages', [...rows, payload]);
     return payload;
   },
 
